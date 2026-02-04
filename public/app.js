@@ -1,0 +1,1003 @@
+// ===== Estado de la aplicación =====
+const state = {
+    projects: [],
+    currentProject: null,
+    currentFile: null,
+    currentDoc: null,
+    viewMode: 'code', // 'code', 'docs', 'split', 'swagger', 'swagger-compare'
+    swaggerFiles: [], // Lista de todos los archivos swagger disponibles
+    isSwaggerMode: false
+};
+
+// ===== Elementos del DOM =====
+const elements = {
+    projectsList: document.getElementById('projectsList'),
+    welcomeScreen: document.getElementById('welcomeScreen'),
+    fileViewer: document.getElementById('fileViewer'),
+    codePanel: document.getElementById('codePanel'),
+    docsPanel: document.getElementById('docsPanel'),
+    swaggerPanel: document.getElementById('swaggerPanel'),
+    swaggerComparePanel: document.getElementById('swaggerComparePanel'),
+    codeContent: document.getElementById('codeContent'),
+    docsContent: document.getElementById('docsContent'),
+    swaggerContent: document.getElementById('swaggerContent'),
+    codeFileName: document.getElementById('codeFileName'),
+    docsFileName: document.getElementById('docsFileName'),
+    swaggerFileName: document.getElementById('swaggerFileName'),
+    currentFilePath: document.getElementById('currentFilePath'),
+    modalOverlay: document.getElementById('modalOverlay'),
+    projectName: document.getElementById('projectName'),
+    projectPath: document.getElementById('projectPath'),
+    toastContainer: document.getElementById('toastContainer'),
+    noDocs: document.getElementById('noDocs'),
+    goToDocBtn: document.getElementById('goToDocBtn'),
+    goToCodeBtn: document.getElementById('goToCodeBtn'),
+    viewerContent: document.querySelector('.viewer-content'),
+    // Tabs
+    normalTabs: document.getElementById('normalTabs'),
+    swaggerTabs: document.getElementById('swaggerTabs'),
+    // Compare elements
+    swaggerLeftSelect: document.getElementById('swaggerLeftSelect'),
+    swaggerRightSelect: document.getElementById('swaggerRightSelect'),
+    compareSwaggerBtn: document.getElementById('compareSwaggerBtn'),
+    yamlLeftContent: document.getElementById('yamlLeftContent'),
+    yamlRightContent: document.getElementById('yamlRightContent'),
+    yamlLeftCode: document.getElementById('yamlLeftCode'),
+    yamlRightCode: document.getElementById('yamlRightCode'),
+    compareLeftHeader: document.getElementById('compareLeftHeader'),
+    compareRightHeader: document.getElementById('compareRightHeader'),
+    // Minimaps
+    diffMinimapLeft: document.getElementById('diffMinimapLeft'),
+    diffMinimapRight: document.getElementById('diffMinimapRight')
+};
+
+// ===== Inicialización =====
+document.addEventListener('DOMContentLoaded', () => {
+    loadProjects();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Botones para añadir proyecto (con protección de contraseña)
+    document.getElementById('addProjectBtn').addEventListener('click', () => {
+        const password = prompt('Introduce la contraseña para añadir un proyecto:');
+        if (password === 'ODH123') {
+            showModal();
+        } else if (password !== null) {
+            showToast('Contraseña incorrecta', 'error');
+        }
+    });
+    
+    // Modal
+    document.getElementById('closeModal').addEventListener('click', hideModal);
+    document.getElementById('cancelBtn').addEventListener('click', hideModal);
+    document.getElementById('saveProjectBtn').addEventListener('click', saveProject);
+    
+    // Cerrar modal con Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') hideModal();
+    });
+    
+    // Cerrar modal al hacer clic fuera
+    elements.modalOverlay.addEventListener('click', (e) => {
+        if (e.target === elements.modalOverlay) hideModal();
+    });
+    
+    // Tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+    
+    // Botón de comparar Swagger
+    elements.compareSwaggerBtn.addEventListener('click', compareSwaggers);
+    
+    // Botones de navegación
+    elements.goToDocBtn.addEventListener('click', () => {
+        if (state.currentDoc) {
+            switchTab('docs');
+        } else {
+            showToast('No hay documentación disponible', 'error');
+        }
+    });
+    
+    elements.goToCodeBtn.addEventListener('click', () => {
+        if (state.currentFile) {
+            switchTab('code');
+        }
+    });
+}
+
+// ===== API Functions =====
+async function loadProjects() {
+    try {
+        const response = await fetch('/api/projects');
+        state.projects = await response.json();
+        renderProjects();
+        
+        if (state.projects.length === 0) {
+            showWelcome();
+        }
+    } catch (error) {
+        console.error('Error loading projects:', error);
+        showToast('Error al cargar proyectos', 'error');
+    }
+}
+
+async function saveProject() {
+    const name = elements.projectName.value.trim();
+    const path = elements.projectPath.value.trim();
+    
+    if (!name || !path) {
+        showToast('Por favor, completa todos los campos', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/projects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, path })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            showToast(error.error, 'error');
+            return;
+        }
+        
+        const project = await response.json();
+        state.projects.push(project);
+        renderProjects();
+        hideModal();
+        showToast('Proyecto añadido correctamente', 'success');
+        
+        // Cargar el árbol del nuevo proyecto
+        loadProjectTree(project.id);
+    } catch (error) {
+        console.error('Error saving project:', error);
+        showToast('Error al guardar el proyecto', 'error');
+    }
+}
+
+async function deleteProject(id, event) {
+    event.stopPropagation();
+    
+    if (!confirm('¿Estás seguro de eliminar este proyecto?')) return;
+    
+    try {
+        await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+        state.projects = state.projects.filter(p => p.id !== id);
+        renderProjects();
+        showToast('Proyecto eliminado', 'success');
+        
+        if (state.projects.length === 0) {
+            showWelcome();
+        }
+    } catch (error) {
+        console.error('Error deleting project:', error);
+        showToast('Error al eliminar el proyecto', 'error');
+    }
+}
+
+async function loadProjectTree(projectId) {
+    const treeContainer = document.getElementById(`tree-${projectId}`);
+    if (!treeContainer) return;
+    
+    treeContainer.innerHTML = '<div class="loading">Cargando...</div>';
+    
+    try {
+        const response = await fetch(`/api/projects/${projectId}/tree`);
+        const tree = await response.json();
+        
+        treeContainer.innerHTML = '';
+        renderTree(tree, treeContainer, projectId);
+        
+        // Buscar y abrir automáticamente el README.md de documentacion
+        const readmePath = findReadmeInDocumentacion(tree);
+        if (readmePath) {
+            loadFile(projectId, readmePath, 'markdown');
+        }
+    } catch (error) {
+        console.error('Error loading tree:', error);
+        treeContainer.innerHTML = '<div class="empty-tree">Error al cargar archivos</div>';
+    }
+}
+
+// Función para buscar README.md en la carpeta documentacion
+function findReadmeInDocumentacion(tree) {
+    for (const item of tree) {
+        if (item.type === 'folder' && item.name.toLowerCase() === 'documentacion') {
+            // Buscar README.md dentro de esta carpeta
+            if (item.children) {
+                for (const child of item.children) {
+                    if (child.type === 'file' && child.name.toLowerCase() === 'readme.md') {
+                        return child.path;
+                    }
+                }
+            }
+        }
+    }
+    return null;
+}
+
+async function loadFile(projectId, filePath, fileType) {
+    try {
+        const response = await fetch(`/api/projects/${projectId}/file?path=${encodeURIComponent(filePath)}`);
+        const data = await response.json();
+        
+        state.currentFile = { projectId, path: filePath, ...data };
+        state.currentDoc = null;
+        
+        // Ocultar panel swagger y compare por defecto
+        elements.swaggerPanel.style.display = 'none';
+        elements.swaggerComparePanel.style.display = 'none';
+        
+        // Cambiar tabs según tipo de archivo
+        if (fileType === 'swagger') {
+            setSwaggerMode(true);
+        } else {
+            setSwaggerMode(false);
+        }
+        
+        // Mostrar código
+        elements.codeContent.className = 'language-java'; // Reset classes
+        elements.codeContent.textContent = data.content;
+        elements.codeFileName.textContent = data.fileName;
+        elements.currentFilePath.textContent = filePath;
+        
+        // Aplicar highlight - Eliminar atributo para forzar re-highlight
+        elements.codeContent.removeAttribute('data-highlighted');
+        hljs.highlightElement(elements.codeContent);
+        
+        // Añadir números de línea
+        addLineNumbers(data.content);
+        
+        // Cargar documentación si es un archivo Java
+        if (fileType === 'java') {
+            await loadDocumentation(projectId, filePath);
+            elements.goToDocBtn.style.display = 'inline-flex';
+            elements.goToCodeBtn.style.display = 'none';
+        } else if (fileType === 'markdown') {
+            // Si es un MD, mostrarlo en el panel de docs
+            elements.docsContent.innerHTML = marked.parse(data.content);
+            elements.docsFileName.textContent = data.fileName;
+            state.currentDoc = { projectId, path: filePath, content: data.content };
+            
+            // Highlight code blocks
+            elements.docsContent.querySelectorAll('pre code').forEach(block => {
+                if (!block.classList.contains('language-mermaid') && !block.classList.contains('mermaid')) {
+                    hljs.highlightElement(block);
+                }
+            });
+            
+            // Renderizar diagramas Mermaid
+            await renderMermaidDiagrams(elements.docsContent);
+            
+            elements.goToDocBtn.style.display = 'none';
+            elements.goToCodeBtn.style.display = 'none';
+            switchTab('docs');
+        } else if (fileType === 'swagger') {
+            // Mostrar Swagger UI
+            await loadSwagger(projectId, filePath, data);
+            elements.goToDocBtn.style.display = 'none';
+            elements.goToCodeBtn.style.display = 'none';
+        }
+        
+        showFileViewer();
+        
+        // Highlight active file in tree
+        document.querySelectorAll('.tree-item.active').forEach(el => el.classList.remove('active'));
+        const activeItem = document.querySelector(`[data-path="${filePath}"]`);
+        if (activeItem) activeItem.classList.add('active');
+        
+    } catch (error) {
+        console.error('Error loading file:', error);
+        showToast('Error al cargar el archivo', 'error');
+    }
+}
+
+async function loadDocumentation(projectId, javaPath) {
+    try {
+        const response = await fetch(`/api/projects/${projectId}/doc?javaPath=${encodeURIComponent(javaPath)}`);
+        
+        if (!response.ok) {
+            state.currentDoc = null;
+            elements.docsContent.innerHTML = '<div class="no-docs-content"><div class="no-docs-icon">📭</div><h3>Sin documentación</h3><p>No se encontró documentación para este archivo.</p></div>';
+            elements.docsFileName.textContent = 'Sin documentación';
+            return;
+        }
+        
+        const data = await response.json();
+        state.currentDoc = { projectId, path: data.path, content: data.content };
+        
+        elements.docsContent.innerHTML = marked.parse(data.content);
+        elements.docsFileName.textContent = data.fileName;
+        
+        // Highlight code blocks in markdown
+        elements.docsContent.querySelectorAll('pre code').forEach(block => {
+            if (!block.classList.contains('language-mermaid') && !block.classList.contains('mermaid')) {
+                hljs.highlightElement(block);
+            }
+        });
+        
+        // Renderizar diagramas Mermaid
+        await renderMermaidDiagrams(elements.docsContent);
+        
+    } catch (error) {
+        console.error('Error loading documentation:', error);
+        state.currentDoc = null;
+    }
+}
+
+// ===== Render Functions =====
+function renderProjects() {
+    if (state.projects.length === 0) {
+        elements.projectsList.innerHTML = '<div class="empty-tree">No hay proyectos</div>';
+        return;
+    }
+    
+    elements.projectsList.innerHTML = state.projects.map(project => `
+        <div class="project-item" data-project-id="${project.id}">
+            <div class="project-header" onclick="toggleProject('${project.id}')">
+                <span class="project-toggle" id="toggle-${project.id}">▶</span>
+                <span class="project-icon">📁</span>
+                <span class="project-name" title="${project.path}">${project.name}</span>
+                <button class="project-delete" onclick="deleteProject('${project.id}', event)" title="Eliminar">🗑</button>
+            </div>
+            <div class="file-tree" id="tree-${project.id}" style="display: none;"></div>
+        </div>
+    `).join('');
+}
+
+function renderTree(items, container, projectId, level = 0) {
+    items.forEach(item => {
+        const div = document.createElement('div');
+        
+        if (item.type === 'folder') {
+            div.className = 'tree-item folder';
+            
+            let folderIcon = '📂';
+            let iconClass = 'folder';
+            if (item.isDocsFolder) {
+                folderIcon = '📄';
+                iconClass = 'docs-folder';
+            } else if (item.isSwaggerFolder) {
+                folderIcon = '🔗';
+                iconClass = 'swagger-folder';
+            }
+            
+            div.innerHTML = `
+                <span class="tree-toggle" id="folder-toggle-${item.path.replace(/[\/\\]/g, '-')}">▶</span>
+                <span class="tree-icon ${iconClass}">${folderIcon}</span>
+                <span class="tree-name">${item.name}</span>
+            `;
+            div.onclick = (e) => {
+                e.stopPropagation();
+                toggleFolder(item.path.replace(/[\/\\]/g, '-'));
+            };
+            container.appendChild(div);
+            
+            // Children container
+            const childrenContainer = document.createElement('div');
+            childrenContainer.className = 'tree-children';
+            childrenContainer.id = `folder-children-${item.path.replace(/[\/\\]/g, '-')}`;
+            childrenContainer.style.display = 'none';
+            container.appendChild(childrenContainer);
+            
+            if (item.children && item.children.length > 0) {
+                renderTree(item.children, childrenContainer, projectId, level + 1);
+            }
+        } else {
+            div.className = 'tree-item file';
+            div.dataset.path = item.path;
+            
+            let icon = '📝';
+            let iconClass = 'markdown';
+            
+            if (item.fileType === 'java') {
+                icon = '☕';
+                iconClass = 'java';
+            } else if (item.fileType === 'swagger') {
+                icon = '📡';
+                iconClass = 'swagger';
+            }
+            
+            const hasDoc = item.docPath ? '<span class="tree-badge">DOC</span>' : '';
+            
+            div.innerHTML = `
+                <span class="tree-toggle" style="visibility: hidden;">▶</span>
+                <span class="tree-icon ${iconClass}">${icon}</span>
+                <span class="tree-name">${item.name}</span>
+                ${hasDoc}
+            `;
+            div.onclick = (e) => {
+                e.stopPropagation();
+                loadFile(projectId, item.path, item.fileType);
+            };
+            container.appendChild(div);
+        }
+    });
+}
+
+// ===== UI Functions =====
+function toggleProject(projectId) {
+    const tree = document.getElementById(`tree-${projectId}`);
+    const toggle = document.getElementById(`toggle-${projectId}`);
+    
+    if (tree.style.display === 'none') {
+        tree.style.display = 'block';
+        toggle.classList.add('open');
+        
+        // Cargar árbol si está vacío
+        if (!tree.hasChildNodes() || tree.querySelector('.loading')) {
+            loadProjectTree(projectId);
+        }
+    } else {
+        tree.style.display = 'none';
+        toggle.classList.remove('open');
+    }
+}
+
+function toggleFolder(folderId) {
+    const children = document.getElementById(`folder-children-${folderId}`);
+    const toggle = document.getElementById(`folder-toggle-${folderId}`);
+    
+    if (children) {
+        if (children.style.display === 'none') {
+            children.style.display = 'block';
+            toggle.classList.add('open');
+        } else {
+            children.style.display = 'none';
+            toggle.classList.remove('open');
+        }
+    }
+}
+
+function switchTab(tab) {
+    state.viewMode = tab;
+    
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    
+    // Update panels
+    const viewerContent = document.querySelector('.viewer-content');
+    viewerContent.classList.remove('split');
+    
+    // Ocultar todos los paneles primero
+    elements.codePanel.style.display = 'none';
+    elements.docsPanel.style.display = 'none';
+    elements.swaggerPanel.style.display = 'none';
+    elements.swaggerComparePanel.style.display = 'none';
+    elements.goToDocBtn.style.display = 'none';
+    elements.goToCodeBtn.style.display = 'none';
+    
+    switch (tab) {
+        case 'code':
+            elements.codePanel.style.display = 'flex';
+            elements.goToDocBtn.style.display = state.currentDoc ? 'inline-flex' : 'none';
+            break;
+        case 'docs':
+            elements.docsPanel.style.display = 'flex';
+            elements.goToCodeBtn.style.display = state.currentFile?.fileType === 'java' ? 'inline-flex' : 'none';
+            break;
+        case 'split':
+            viewerContent.classList.add('split');
+            elements.codePanel.style.display = 'flex';
+            elements.docsPanel.style.display = 'flex';
+            break;
+        case 'swagger':
+            elements.swaggerPanel.style.display = 'flex';
+            break;
+        case 'swagger-compare':
+            elements.swaggerComparePanel.style.display = 'flex';
+            populateSwaggerSelectors();
+            break;
+    }
+}
+
+function showModal() {
+    elements.projectName.value = '';
+    elements.projectPath.value = '';
+    elements.modalOverlay.classList.add('show');
+    elements.projectName.focus();
+}
+
+function hideModal() {
+    elements.modalOverlay.classList.remove('show');
+}
+
+function showWelcome() {
+    elements.welcomeScreen.style.display = 'flex';
+    elements.fileViewer.style.display = 'none';
+}
+
+function showFileViewer() {
+    elements.welcomeScreen.style.display = 'none';
+    elements.fileViewer.style.display = 'flex';
+    elements.noDocs.style.display = 'none';
+}
+
+function addLineNumbers(content) {
+    const lines = content.split('\n');
+    const lineNumbersContainer = document.createElement('div');
+    lineNumbersContainer.className = 'line-numbers';
+    
+    for (let i = 1; i <= lines.length; i++) {
+        const lineNumber = document.createElement('span');
+        lineNumber.textContent = i;
+        lineNumbersContainer.appendChild(lineNumber);
+    }
+    
+    // Eliminar números de línea anteriores si existen
+    const existingLineNumbers = elements.codeContent.parentElement.querySelector('.line-numbers');
+    if (existingLineNumbers) {
+        existingLineNumbers.remove();
+    }
+    
+    // Insertar antes del código
+    elements.codeContent.parentElement.insertBefore(lineNumbersContainer, elements.codeContent);
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icons = {
+        success: '✓',
+        error: '✕',
+        info: 'ℹ'
+    };
+    
+    toast.innerHTML = `
+        <span class="toast-icon">${icons[type] || icons.info}</span>
+        <span class="toast-message">${message}</span>
+    `;
+    
+    elements.toastContainer.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'toastSlideIn 0.3s ease reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Variable global para Swagger UI
+let swaggerUIInstance = null;
+
+// Función para mostrar/ocultar tabs según el modo
+function setSwaggerMode(isSwagger) {
+    state.isSwaggerMode = isSwagger;
+    elements.normalTabs.style.display = isSwagger ? 'none' : 'flex';
+    elements.swaggerTabs.style.display = isSwagger ? 'flex' : 'none';
+}
+
+// Función para cargar y renderizar Swagger
+async function loadSwagger(projectId, filePath, data) {
+    elements.swaggerFileName.textContent = data.fileName;
+    elements.currentFilePath.textContent = filePath;
+    
+    // Cambiar a modo Swagger
+    setSwaggerMode(true);
+    
+    // Limpiar contenedor anterior
+    elements.swaggerContent.innerHTML = '';
+    
+    // Destruir instancia anterior si existe
+    if (swaggerUIInstance) {
+        swaggerUIInstance = null;
+    }
+    
+    try {
+        // Parsear YAML a JSON
+        const spec = jsyaml.load(data.content);
+        
+        // Crear Swagger UI
+        swaggerUIInstance = SwaggerUIBundle({
+            spec: spec,
+            dom_id: '#swaggerContent',
+            deepLinking: true,
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIBundle.SwaggerUIStandalonePreset
+            ],
+            layout: 'BaseLayout',
+            defaultModelsExpandDepth: 1,
+            defaultModelExpandDepth: 1,
+            docExpansion: 'list',
+            filter: true,
+            showExtensions: true,
+            showCommonExtensions: true,
+            syntaxHighlight: {
+                activate: true,
+                theme: 'monokai'
+            }
+        });
+        
+        // Mostrar panel swagger
+        switchTab('swagger');
+        
+    } catch (error) {
+        console.error('Error parsing swagger:', error);
+        elements.swaggerContent.innerHTML = `
+            <div class="swagger-error">
+                <div class="swagger-error-icon">⚠️</div>
+                <h3>Error al parsear el archivo Swagger</h3>
+                <p>${error.message}</p>
+                <pre>${data.content}</pre>
+            </div>
+        `;
+        switchTab('swagger');
+    }
+}
+
+// Función para recopilar todos los archivos Swagger de todos los proyectos
+async function collectSwaggerFiles() {
+    state.swaggerFiles = [];
+    
+    for (const project of state.projects) {
+        try {
+            const response = await fetch(`/api/projects/${project.id}/tree`);
+            const tree = await response.json();
+            findSwaggerFiles(tree, project.id, project.name);
+        } catch (error) {
+            console.error('Error loading project tree:', error);
+        }
+    }
+}
+
+// Función recursiva para encontrar archivos Swagger en el árbol
+function findSwaggerFiles(items, projectId, projectName, parentPath = '') {
+    for (const item of items) {
+        if (item.type === 'folder' && item.children) {
+            findSwaggerFiles(item.children, projectId, projectName, item.path);
+        } else if (item.type === 'file' && item.fileType === 'swagger') {
+            state.swaggerFiles.push({
+                projectId,
+                projectName,
+                path: item.path,
+                name: item.name
+            });
+        }
+    }
+}
+
+// Función para popular los selectores de Swagger
+async function populateSwaggerSelectors() {
+    await collectSwaggerFiles();
+    
+    const leftSelect = elements.swaggerLeftSelect;
+    const rightSelect = elements.swaggerRightSelect;
+    
+    // Guardar valores actuales
+    const leftValue = leftSelect.value;
+    const rightValue = rightSelect.value;
+    
+    // Limpiar selectores
+    leftSelect.innerHTML = '<option value="">Seleccionar archivo...</option>';
+    rightSelect.innerHTML = '<option value="">Seleccionar archivo...</option>';
+    
+    // Añadir opciones
+    for (const file of state.swaggerFiles) {
+        const optionValue = JSON.stringify({ projectId: file.projectId, path: file.path });
+        const optionText = `${file.projectName} / ${file.path}`;
+        
+        leftSelect.innerHTML += `<option value='${optionValue}'>${optionText}</option>`;
+        rightSelect.innerHTML += `<option value='${optionValue}'>${optionText}</option>`;
+    }
+    
+    // Restaurar valores si existen
+    if (leftValue) leftSelect.value = leftValue;
+    if (rightValue) rightSelect.value = rightValue;
+    
+    // Pre-seleccionar el swagger actual en el izquierdo si existe
+    if (state.currentFile && state.currentFile.fileType === 'swagger') {
+        const currentValue = JSON.stringify({ 
+            projectId: state.currentFile.projectId, 
+            path: state.currentFile.path 
+        });
+        leftSelect.value = currentValue;
+    }
+}
+
+// Función para comparar dos Swaggers mostrando YAML con diferencias
+async function compareSwaggers() {
+    const leftValue = elements.swaggerLeftSelect.value;
+    const rightValue = elements.swaggerRightSelect.value;
+    
+    if (!leftValue || !rightValue) {
+        showToast('Selecciona ambos archivos Swagger para comparar', 'error');
+        return;
+    }
+    
+    const leftData = JSON.parse(leftValue);
+    const rightData = JSON.parse(rightValue);
+    
+    // Mostrar loading
+    elements.yamlLeftCode.textContent = 'Cargando...';
+    elements.yamlRightCode.textContent = 'Cargando...';
+    
+    try {
+        // Cargar ambos archivos
+        const [leftResponse, rightResponse] = await Promise.all([
+            fetch(`/api/projects/${leftData.projectId}/file?path=${encodeURIComponent(leftData.path)}`),
+            fetch(`/api/projects/${rightData.projectId}/file?path=${encodeURIComponent(rightData.path)}`)
+        ]);
+        
+        const [leftFile, rightFile] = await Promise.all([
+            leftResponse.json(),
+            rightResponse.json()
+        ]);
+        
+        // Actualizar headers
+        elements.compareLeftHeader.textContent = leftFile.fileName;
+        elements.compareRightHeader.textContent = rightFile.fileName;
+        
+        // Obtener líneas de cada archivo
+        const leftLines = leftFile.content.split('\n');
+        const rightLines = rightFile.content.split('\n');
+        
+        // Calcular diferencias
+        const diff = computeDiff(leftLines, rightLines);
+        
+        // Renderizar con diferencias resaltadas
+        renderDiffView(diff, leftLines, rightLines);
+        
+        showToast('Comparación cargada', 'success');
+        
+    } catch (error) {
+        console.error('Error comparing swaggers:', error);
+        showToast('Error al cargar los archivos Swagger', 'error');
+    }
+}
+
+// Función para calcular diferencias entre dos arrays de líneas (LCS-based diff)
+function computeDiff(leftLines, rightLines) {
+    const m = leftLines.length;
+    const n = rightLines.length;
+    
+    // Crear matriz LCS
+    const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+    
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            if (leftLines[i - 1] === rightLines[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+    
+    // Backtrack para encontrar diferencias
+    const result = [];
+    let i = m, j = n;
+    
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && leftLines[i - 1] === rightLines[j - 1]) {
+            result.unshift({ type: 'equal', leftIndex: i - 1, rightIndex: j - 1 });
+            i--;
+            j--;
+        } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+            result.unshift({ type: 'added', rightIndex: j - 1 });
+            j--;
+        } else {
+            result.unshift({ type: 'removed', leftIndex: i - 1 });
+            i--;
+        }
+    }
+    
+    return result;
+}
+
+// Función para renderizar la vista de diferencias
+function renderDiffView(diff, leftLines, rightLines) {
+    let leftHtml = '';
+    let rightHtml = '';
+    let leftLineNum = 0;
+    let rightLineNum = 0;
+    let lineIndex = 0;
+    
+    // Guardar información de diferencias para el minimap
+    const diffMarkers = [];
+    
+    for (const item of diff) {
+        if (item.type === 'equal') {
+            const line = escapeHtml(leftLines[item.leftIndex]);
+            leftHtml += `<div class="diff-line" data-line="${lineIndex}"><span class="line-num">${++leftLineNum}</span><span class="line-content">${line}</span></div>`;
+            rightHtml += `<div class="diff-line" data-line="${lineIndex}"><span class="line-num">${++rightLineNum}</span><span class="line-content">${line}</span></div>`;
+        } else if (item.type === 'removed') {
+            const line = escapeHtml(leftLines[item.leftIndex]);
+            leftHtml += `<div class="diff-line diff-removed" data-line="${lineIndex}"><span class="line-num">${++leftLineNum}</span><span class="line-content">${line}</span></div>`;
+            rightHtml += `<div class="diff-line diff-empty" data-line="${lineIndex}"><span class="line-num"></span><span class="line-content"></span></div>`;
+            diffMarkers.push({ lineIndex, type: 'removed' });
+        } else if (item.type === 'added') {
+            const line = escapeHtml(rightLines[item.rightIndex]);
+            leftHtml += `<div class="diff-line diff-empty" data-line="${lineIndex}"><span class="line-num"></span><span class="line-content"></span></div>`;
+            rightHtml += `<div class="diff-line diff-added" data-line="${lineIndex}"><span class="line-num">${++rightLineNum}</span><span class="line-content">${line}</span></div>`;
+            diffMarkers.push({ lineIndex, type: 'added' });
+        }
+        lineIndex++;
+    }
+    
+    elements.yamlLeftCode.innerHTML = leftHtml;
+    elements.yamlRightCode.innerHTML = rightHtml;
+    
+    // Renderizar minimaps
+    renderMinimap(elements.diffMinimapLeft, diffMarkers, diff.length, elements.yamlLeftContent, 'removed');
+    renderMinimap(elements.diffMinimapRight, diffMarkers, diff.length, elements.yamlRightContent, 'added');
+    
+    // Sincronizar scroll
+    setupSyncScroll(elements.yamlLeftContent, elements.yamlRightContent);
+    
+    // Actualizar viewport del minimap al hacer scroll
+    updateMinimapViewport(elements.yamlLeftContent, elements.diffMinimapLeft, diff.length);
+    updateMinimapViewport(elements.yamlRightContent, elements.diffMinimapRight, diff.length);
+}
+
+// Función para renderizar el minimap
+function renderMinimap(minimapElement, diffMarkers, totalLines, contentElement, highlightType) {
+    minimapElement.innerHTML = '';
+    
+    if (totalLines === 0) return;
+    
+    const minimapHeight = minimapElement.clientHeight || 400;
+    const lineHeight = minimapHeight / totalLines;
+    
+    // Agrupar marcadores consecutivos del mismo tipo
+    const groups = [];
+    let currentGroup = null;
+    
+    for (const marker of diffMarkers) {
+        if (currentGroup && currentGroup.type === marker.type && marker.lineIndex === currentGroup.endLine + 1) {
+            currentGroup.endLine = marker.lineIndex;
+        } else {
+            if (currentGroup) groups.push(currentGroup);
+            currentGroup = { type: marker.type, startLine: marker.lineIndex, endLine: marker.lineIndex };
+        }
+    }
+    if (currentGroup) groups.push(currentGroup);
+    
+    // Crear marcadores visuales
+    for (const group of groups) {
+        const marker = document.createElement('div');
+        marker.className = `diff-minimap-marker ${group.type}`;
+        
+        const top = group.startLine * lineHeight;
+        const height = Math.max(3, (group.endLine - group.startLine + 1) * lineHeight);
+        
+        marker.style.top = `${top}px`;
+        marker.style.height = `${height}px`;
+        
+        // Click para navegar
+        marker.addEventListener('click', () => {
+            const targetLine = contentElement.querySelector(`[data-line="${group.startLine}"]`);
+            if (targetLine) {
+                targetLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+        
+        minimapElement.appendChild(marker);
+    }
+    
+    // Añadir viewport indicator
+    const viewport = document.createElement('div');
+    viewport.className = 'diff-minimap-viewport';
+    viewport.id = `viewport-${minimapElement.id}`;
+    minimapElement.appendChild(viewport);
+}
+
+// Función para actualizar el viewport del minimap
+function updateMinimapViewport(contentElement, minimapElement, totalLines) {
+    const viewport = document.getElementById(`viewport-${minimapElement.id}`);
+    if (!viewport || totalLines === 0) return;
+    
+    const updateViewport = () => {
+        const minimapHeight = minimapElement.clientHeight;
+        const contentScrollHeight = contentElement.scrollHeight;
+        const contentClientHeight = contentElement.clientHeight;
+        const scrollTop = contentElement.scrollTop;
+        
+        if (contentScrollHeight <= contentClientHeight) {
+            viewport.style.display = 'none';
+            return;
+        }
+        
+        viewport.style.display = 'block';
+        const viewportHeight = (contentClientHeight / contentScrollHeight) * minimapHeight;
+        const viewportTop = (scrollTop / contentScrollHeight) * minimapHeight;
+        
+        viewport.style.top = `${viewportTop}px`;
+        viewport.style.height = `${Math.max(20, viewportHeight)}px`;
+    };
+    
+    contentElement.addEventListener('scroll', updateViewport);
+    // Actualizar inicialmente después de un pequeño delay para que el DOM esté listo
+    setTimeout(updateViewport, 100);
+}
+
+// Función para configurar sincronización de scroll bidireccional
+function setupSyncScroll(element1, element2) {
+    let isSyncing = false;
+    
+    element1.addEventListener('scroll', () => {
+        if (isSyncing) {
+            isSyncing = false;
+            return;
+        }
+        isSyncing = true;
+        element2.scrollTop = element1.scrollTop;
+        element2.scrollLeft = element1.scrollLeft;
+    });
+    
+    element2.addEventListener('scroll', () => {
+        if (isSyncing) {
+            isSyncing = false;
+            return;
+        }
+        isSyncing = true;
+        element1.scrollTop = element2.scrollTop;
+        element1.scrollLeft = element2.scrollLeft;
+    });
+}
+
+// Función para escapar HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Configurar marked para mejor renderizado
+marked.setOptions({
+    breaks: true,
+    gfm: true,
+    headerIds: true
+});
+
+// Configurar Mermaid
+mermaid.initialize({
+    startOnLoad: false,
+    theme: 'dark',
+    themeVariables: {
+        primaryColor: '#0078d4',
+        primaryTextColor: '#fff',
+        primaryBorderColor: '#3e3e3e',
+        lineColor: '#6e6e6e',
+        secondaryColor: '#252526',
+        tertiaryColor: '#2d2d2d',
+        background: '#1e1e1e',
+        mainBkg: '#252526',
+        secondBkg: '#2d2d2d',
+        border1: '#3e3e3e',
+        border2: '#3e3e3e',
+        fontFamily: 'Segoe UI, sans-serif'
+    }
+});
+
+// Función para renderizar diagramas Mermaid
+async function renderMermaidDiagrams(container) {
+    const mermaidBlocks = container.querySelectorAll('pre code.language-mermaid, pre code.mermaid');
+    
+    for (let i = 0; i < mermaidBlocks.length; i++) {
+        const block = mermaidBlocks[i];
+        const pre = block.parentElement;
+        const code = block.textContent;
+        
+        try {
+            const id = `mermaid-${Date.now()}-${i}`;
+            const { svg } = await mermaid.render(id, code);
+            
+            const div = document.createElement('div');
+            div.className = 'mermaid-diagram';
+            div.innerHTML = svg;
+            
+            pre.replaceWith(div);
+        } catch (error) {
+            console.error('Error rendering mermaid:', error);
+            // Mantener el código original si hay error
+            block.classList.add('mermaid-error');
+        }
+    }
+}

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentación Operational Data Hub (ODH)</title>
+    
+    <!-- Highlight.js para syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/yaml.min.js"></script>
+    
+    <!-- Marked para Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Mermaid para diagramas -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    
+    <!-- Swagger UI -->
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css">
+    <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
+    
+    <!-- JS-YAML para parsear archivos YAML -->
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <img src="AXA_Logo.svg.png" alt="AXA Logo" class="logo-img">
+                <h1>Documentación Operational Data Hub (ODH)</h1>
+            </div>
+            <div class="header-right">
+                <button id="addProjectBtn" class="btn btn-primary">
+                    <span class="icon">+</span> Añadir Proyecto
+                </button>
+            </div>
+        </header>
+
+        <div class="main-container">
+            <!-- Sidebar -->
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <h2>Proyectos</h2>
+                </div>
+                <div class="projects-list" id="projectsList">
+                    <!-- Los proyectos se cargarán aquí -->
+                </div>
+            </aside>
+
+            <!-- Content Area -->
+            <main class="content-area">
+                <!-- Welcome screen -->
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-content">
+                        <div class="welcome-icon">📚</div>
+                        <h2>Bienvenido al Visor de Documentación de ODH</h2>
+                        <p>Seleccione un proyecto para explorar su documentación.</p>
+                    </div>
+                </div>
+
+                <!-- File Viewer -->
+                <div class="file-viewer" id="fileViewer" style="display: none;">
+                    <!-- Tabs normales (código/docs) -->
+                    <div class="viewer-tabs" id="normalTabs">
+                        <button class="tab-btn active" data-tab="code" id="codeTab">
+                            <span class="tab-icon">☕</span> Código Java
+                        </button>
+                        <button class="tab-btn" data-tab="docs" id="docsTab">
+                            <span class="tab-icon">📄</span> Documentación
+                        </button>
+                        <button class="tab-btn" data-tab="split" id="splitTab">
+                            <span class="tab-icon">◫</span> Vista Dividida
+                        </button>
+                    </div>
+
+                    <!-- Tabs de Swagger -->
+                    <div class="viewer-tabs swagger-tabs" id="swaggerTabs" style="display: none;">
+                        <button class="tab-btn active" data-tab="swagger" id="swaggerViewTab">
+                            <span class="tab-icon">📡</span> Ver Swagger
+                        </button>
+                        <button class="tab-btn" data-tab="swagger-compare" id="swaggerCompareTab">
+                            <span class="tab-icon">⚖️</span> Comparar Swagger
+                        </button>
+                    </div>
+
+                    <div class="viewer-header" id="viewerHeader">
+                        <span class="file-path" id="currentFilePath"></span>
+                        <div class="viewer-actions">
+                            <button class="btn btn-small" id="goToDocBtn" title="Ir a documentación">
+                                📄 Ver Doc
+                            </button>
+                            <button class="btn btn-small" id="goToCodeBtn" title="Ir a código" style="display: none;">
+                                ☕ Ver Código
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="viewer-content">
+                        <!-- Code View -->
+                        <div class="code-panel" id="codePanel">
+                            <div class="panel-header">
+                                <span id="codeFileName"></span>
+                            </div>
+                            <div class="code-content">
+                                <pre><code class="language-java" id="codeContent"></code></pre>
+                            </div>
+                        </div>
+
+                        <!-- Docs View -->
+                        <div class="docs-panel" id="docsPanel" style="display: none;">
+                            <div class="panel-header">
+                                <span id="docsFileName"></span>
+                            </div>
+                            <div class="markdown-content" id="docsContent"></div>
+                        </div>
+
+                        <!-- Swagger View -->
+                        <div class="swagger-panel" id="swaggerPanel" style="display: none;">
+                            <div class="panel-header">
+                                <span id="swaggerFileName"></span>
+                            </div>
+                            <div class="swagger-content" id="swaggerContent"></div>
+                        </div>
+
+                        <!-- Swagger Compare View -->
+                        <div class="swagger-compare-panel" id="swaggerComparePanel" style="display: none;">
+                            <div class="compare-selectors">
+                                <div class="compare-selector">
+                                    <label>left:</label>
+                                    <select id="swaggerLeftSelect">
+                                        <option value="">Seleccionar archivo...</option>
+                                    </select>
+                                </div>
+                                <div class="compare-selector">
+                                    <label>right:</label>
+                                    <select id="swaggerRightSelect">
+                                        <option value="">Seleccionar archivo...</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary" id="compareSwaggerBtn">Comparar</button>
+                            </div>
+                            <div class="compare-legend">
+                                <span class="legend-item added"><span class="legend-color"></span> Añadido en derecho</span>
+                                <span class="legend-item removed"><span class="legend-color"></span> Solo en izquierdo</span>
+                                <span class="legend-item modified"><span class="legend-color"></span> Modificado</span>
+                            </div>
+                            <div class="compare-content">
+                                <div class="compare-left">
+                                    <div class="compare-header" id="compareLeftHeader">Selecciona un Swagger</div>
+                                    <div class="diff-container">
+                                        <div class="yaml-content" id="yamlLeftContent">
+                                            <pre><code class="language-yaml" id="yamlLeftCode"></code></pre>
+                                        </div>
+                                        <div class="diff-minimap" id="diffMinimapLeft"></div>
+                                    </div>
+                                </div>
+                                <div class="compare-divider"></div>
+                                <div class="compare-right">
+                                    <div class="compare-header" id="compareRightHeader">Selecciona un Swagger</div>
+                                    <div class="diff-container">
+                                        <div class="yaml-content" id="yamlRightContent">
+                                            <pre><code class="language-yaml" id="yamlRightCode"></code></pre>
+                                        </div>
+                                        <div class="diff-minimap" id="diffMinimapRight"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No Documentation Found -->
+                <div class="no-docs" id="noDocs" style="display: none;">
+                    <div class="no-docs-content">
+                        <div class="no-docs-icon">📭</div>
+                        <h3>Sin documentación</h3>
+                        <p>No se encontró documentación para este archivo.</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal para añadir proyecto -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="addProjectModal">
+            <div class="modal-header">
+                <h3>Añadir Proyecto</h3>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="projectName">Nombre del Proyecto</label>
+                    <input type="text" id="projectName" placeholder="Ej: ms_odh_policy">
+                </div>
+                <div class="form-group">
+                    <label for="projectPath">Ruta del Proyecto</label>
+                    <input type="text" id="projectPath" placeholder="Ej: C:\Users\...\ms_odh_policy">
+                    <small class="help-text">Ruta absoluta a la carpeta raíz del proyecto</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelBtn">Cancelar</button>
+                <button class="btn btn-primary" id="saveProjectBtn">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
