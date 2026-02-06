@@ -647,8 +647,12 @@ function applySearchFilter(treeContainer, matchingFiles, projectId) {
 function clearProjectSearch(projectId) {
     const tree = document.getElementById(`tree-${projectId}`);
     const input = document.getElementById(`search-input-${projectId}`);
+    const searchBar = document.getElementById(`search-bar-${projectId}`);
     
     if (input) input.value = '';
+    
+    // Ocultar barra de búsqueda
+    if (searchBar) searchBar.style.display = 'none';
     
     // Quitar clase de búsqueda activa
     tree.classList.remove('search-active');

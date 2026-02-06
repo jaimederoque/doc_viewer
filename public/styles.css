@@ -223,22 +223,11 @@ body {
     white-space: nowrap;
 }
 
-.project-delete {
-    opacity: 0;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 4px;
-    font-size: 14px;
-    transition: opacity 0.15s, color 0.15s;
-}
-
 .project-action-btn {
     opacity: 0;
     background: none;
     border: none;
-    color: var(--text-secondary);
+    color: var(--text-muted, #555);
     cursor: pointer;
     padding: 4px;
     font-size: 14px;
@@ -246,7 +235,11 @@ body {
 }
 
 .project-header:hover .project-action-btn {
-    opacity: 1;
+    opacity: 0.5;
+}
+
+.project-action-btn:hover {
+    opacity: 1 !important;
 }
 
 .project-action-btn.project-search:hover {
