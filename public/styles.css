@@ -242,6 +242,27 @@ body {
     color: var(--accent-danger);
 }
 
+/* ===== Folder Upload Button ===== */
+.folder-upload-btn {
+    opacity: 0;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 12px;
+    transition: opacity 0.15s, color 0.15s;
+    margin-left: auto;
+}
+
+.tree-item.folder:hover .folder-upload-btn {
+    opacity: 1;
+}
+
+.folder-upload-btn:hover {
+    color: var(--accent-primary);
+}
+
 /* ===== File Tree ===== */
 .file-tree {
     padding-left: 20px;
@@ -605,18 +626,74 @@ body {
 }
 
 /* ===== Mermaid Diagrams ===== */
-.mermaid-diagram {
-    display: flex;
-    justify-content: center;
+.mermaid-wrapper {
     margin: 20px 0;
-    padding: 20px;
     background-color: var(--bg-secondary);
     border-radius: var(--border-radius);
-    overflow-x: auto;
+    overflow: hidden;
+}
+
+.mermaid-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mermaid-zoom-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background-color: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+.mermaid-zoom-btn:hover {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.mermaid-zoom-level {
+    min-width: 50px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.mermaid-diagram-container {
+    overflow: auto;
+    max-height: 600px;
+    padding: 20px;
+    cursor: grab;
+    user-select: none;
+}
+
+.mermaid-diagram-container:active {
+    cursor: grabbing;
+}
+
+.mermaid-diagram {
+    display: inline-flex;
+    justify-content: flex-start;
+    transform-origin: left top;
+    transition: transform 0.2s ease;
+    pointer-events: none;
+    min-width: fit-content;
 }
 
 .mermaid-diagram svg {
-    max-width: 100%;
+    max-width: none;
     height: auto;
 }
 
@@ -691,6 +768,20 @@ body {
     max-width: 500px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     animation: modalSlideIn 0.2s ease;
+}
+
+.modal.modal-small {
+    max-width: 350px;
+}
+
+.upload-path {
+    background-color: var(--bg-tertiary);
+    padding: 8px 12px;
+    border-radius: var(--border-radius);
+    font-family: monospace;
+    font-size: 13px;
+    color: var(--text-primary);
+    word-break: break-all;
 }
 
 @keyframes modalSlideIn {

@@ -2,6 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer');
+
+// Configuración de multer para subida de archivos (usar memoria temporal)
+const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 } // Límite de 10MB
+});
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -86,6 +93,63 @@ app.delete('/api/projects/:id', (req, res) => {
     projects = projects.filter(p => p.id !== id);
     saveProjects();
     res.json({ success: true });
+});
+
+// Subir archivos a una carpeta de un proyecto (múltiples)
+app.post('/api/projects/:id/upload', upload.array('files', 20), (req, res) => {
+    const { id } = req.params;
+    const { folderPath } = req.body;
+    
+    const project = projects.find(p => p.id === id);
+    
+    if (!project) {
+        return res.status(404).json({ error: 'Proyecto no encontrado' });
+    }
+
+    if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ error: 'No se han enviado archivos' });
+    }
+
+    const targetDir = path.join(project.path, folderPath);
+    
+    // Verificar que la carpeta destino está dentro del proyecto (seguridad)
+    if (!targetDir.startsWith(project.path)) {
+        return res.status(403).json({ error: 'Acceso denegado' });
+    }
+
+    // Verificar que la carpeta destino existe
+    if (!fs.existsSync(targetDir)) {
+        return res.status(400).json({ error: 'La carpeta destino no existe' });
+    }
+
+    const uploadedFiles = [];
+    const errors = [];
+    
+    try {
+        for (const file of req.files) {
+            const destPath = path.join(targetDir, file.originalname);
+            try {
+                fs.writeFileSync(destPath, file.buffer);
+                uploadedFiles.push(file.originalname);
+            } catch (err) {
+                errors.push(file.originalname);
+            }
+        }
+        
+        if (uploadedFiles.length === 0) {
+            return res.status(500).json({ error: 'No se pudo subir ningún archivo' });
+        }
+        
+        res.json({ 
+            success: true, 
+            uploadedFiles,
+            errors,
+            count: uploadedFiles.length
+        });
+    } catch (error) {
+        console.error('Error uploading files:', error);
+        res.status(500).json({ error: 'Error al subir los archivos' });
+    }
 });
 
 // Obtener estructura de archivos de un proyecto

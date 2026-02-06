@@ -6,7 +6,9 @@ const state = {
     currentDoc: null,
     viewMode: 'code', // 'code', 'docs', 'split', 'swagger', 'swagger-compare'
     swaggerFiles: [], // Lista de todos los archivos swagger disponibles
-    isSwaggerMode: false
+    isSwaggerMode: false,
+    pendingPasswordAction: null, // Acción pendiente tras validar contraseña
+    uploadTarget: null // Información de la carpeta destino para subir archivos
 };
 
 // ===== Elementos del DOM =====
@@ -48,7 +50,15 @@ const elements = {
     compareRightHeader: document.getElementById('compareRightHeader'),
     // Minimaps
     diffMinimapLeft: document.getElementById('diffMinimapLeft'),
-    diffMinimapRight: document.getElementById('diffMinimapRight')
+    diffMinimapRight: document.getElementById('diffMinimapRight'),
+    // Password modal
+    passwordModalOverlay: document.getElementById('passwordModalOverlay'),
+    passwordInput: document.getElementById('passwordInput'),
+    passwordModalTitle: document.getElementById('passwordModalTitle'),
+    // Upload modal
+    uploadModalOverlay: document.getElementById('uploadModalOverlay'),
+    uploadTargetPath: document.getElementById('uploadTargetPath'),
+    fileInput: document.getElementById('fileInput')
 };
 
 // ===== Inicialización =====
@@ -60,27 +70,47 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupEventListeners() {
     // Botones para añadir proyecto (con protección de contraseña)
     document.getElementById('addProjectBtn').addEventListener('click', () => {
-        const password = prompt('Introduce la contraseña para añadir un proyecto:');
-        if (password === 'ODH123') {
+        requestPassword('Añadir proyecto', () => {
             showModal();
-        } else if (password !== null) {
-            showToast('Contraseña incorrecta', 'error');
-        }
+        });
     });
     
-    // Modal
+    // Modal de añadir proyecto
     document.getElementById('closeModal').addEventListener('click', hideModal);
     document.getElementById('cancelBtn').addEventListener('click', hideModal);
     document.getElementById('saveProjectBtn').addEventListener('click', saveProject);
     
-    // Cerrar modal con Escape
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') hideModal();
+    // Modal de contraseña
+    document.getElementById('closePasswordModal').addEventListener('click', hidePasswordModal);
+    document.getElementById('cancelPasswordBtn').addEventListener('click', hidePasswordModal);
+    document.getElementById('confirmPasswordBtn').addEventListener('click', validatePassword);
+    elements.passwordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') validatePassword();
     });
     
-    // Cerrar modal al hacer clic fuera
+    // Modal de subida de archivos
+    document.getElementById('closeUploadModal').addEventListener('click', hideUploadModal);
+    document.getElementById('cancelUploadBtn').addEventListener('click', hideUploadModal);
+    document.getElementById('confirmUploadBtn').addEventListener('click', uploadFile);
+    
+    // Cerrar modales con Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            hideModal();
+            hidePasswordModal();
+            hideUploadModal();
+        }
+    });
+    
+    // Cerrar modales al hacer clic fuera
     elements.modalOverlay.addEventListener('click', (e) => {
         if (e.target === elements.modalOverlay) hideModal();
+    });
+    elements.passwordModalOverlay.addEventListener('click', (e) => {
+        if (e.target === elements.passwordModalOverlay) hidePasswordModal();
+    });
+    elements.uploadModalOverlay.addEventListener('click', (e) => {
+        if (e.target === elements.uploadModalOverlay) hideUploadModal();
     });
     
     // Tabs
@@ -162,24 +192,27 @@ async function saveProject() {
 async function deleteProject(id, event) {
     event.stopPropagation();
     
-    if (!confirm('¿Estás seguro de eliminar este proyecto?')) return;
-    
-    try {
-        await fetch(`/api/projects/${id}`, { method: 'DELETE' });
-        state.projects = state.projects.filter(p => p.id !== id);
-        renderProjects();
-        showToast('Proyecto eliminado', 'success');
+    requestPassword('Eliminar proyecto', async () => {
+        if (!confirm('¿Estás seguro de eliminar este proyecto?')) return;
         
-        if (state.projects.length === 0) {
-            showWelcome();
+        try {
+            await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+            state.projects = state.projects.filter(p => p.id !== id);
+            renderProjects();
+            showToast('Proyecto eliminado', 'success');
+            
+            if (state.projects.length === 0) {
+                showWelcome();
+            }
+        } catch (error) {
+            console.error('Error deleting project:', error);
+            showToast('Error al eliminar el proyecto', 'error');
         }
-    } catch (error) {
-        console.error('Error deleting project:', error);
-        showToast('Error al eliminar el proyecto', 'error');
-    }
+    });
 }
 
-async function loadProjectTree(projectId) {
+async function loadProjectTree(projectId, options = {}) {
+    const { skipReadme = false, expandFolder = null } = options;
     const treeContainer = document.getElementById(`tree-${projectId}`);
     if (!treeContainer) return;
     
@@ -192,14 +225,40 @@ async function loadProjectTree(projectId) {
         treeContainer.innerHTML = '';
         renderTree(tree, treeContainer, projectId);
         
-        // Buscar y abrir automáticamente el README.md de documentacion
-        const readmePath = findReadmeInDocumentacion(tree);
-        if (readmePath) {
-            loadFile(projectId, readmePath, 'markdown');
+        // Expandir carpeta específica si se indica
+        if (expandFolder) {
+            expandFolderPath(projectId, expandFolder);
+        }
+        
+        // Buscar y abrir automáticamente el README.md de documentacion (si no se omite)
+        if (!skipReadme) {
+            const readmePath = findReadmeInDocumentacion(tree);
+            if (readmePath) {
+                loadFile(projectId, readmePath, 'markdown');
+            }
         }
     } catch (error) {
         console.error('Error loading tree:', error);
         treeContainer.innerHTML = '<div class="empty-tree">Error al cargar archivos</div>';
+    }
+}
+
+// Expande todas las carpetas en una ruta
+function expandFolderPath(projectId, folderPath) {
+    const parts = folderPath.split(/[\/\\]/);
+    let currentPath = '';
+    
+    for (const part of parts) {
+        if (!part) continue;
+        currentPath = currentPath ? `${currentPath}/${part}` : part;
+        const folderId = `${projectId}-${currentPath.replace(/[\/\\]/g, '-')}`;
+        const children = document.getElementById(`folder-children-${folderId}`);
+        const toggle = document.getElementById(`folder-toggle-${folderId}`);
+        
+        if (children && children.style.display === 'none') {
+            children.style.display = 'block';
+            if (toggle) toggle.classList.add('open');
+        }
     }
 }
 
@@ -387,11 +446,21 @@ function renderTree(items, container, projectId, level = 0) {
                 <span class="tree-toggle" id="folder-toggle-${folderId}">▶</span>
                 <span class="tree-icon ${iconClass}">${folderIcon}</span>
                 <span class="tree-name">${item.name}</span>
+                <button class="folder-upload-btn" title="Subir archivo">📤</button>
             `;
+            
+            // Click en la carpeta para expandir/contraer
             div.onclick = (e) => {
                 e.stopPropagation();
+                // Si el click fue en el botón de subir, no expandir
+                if (e.target.classList.contains('folder-upload-btn')) return;
                 toggleFolder(folderId);
             };
+            
+            // Añadir listener al botón de subir
+            const uploadBtn = div.querySelector('.folder-upload-btn');
+            uploadBtn.addEventListener('click', (e) => initiateUpload(projectId, item.path, e));
+            
             container.appendChild(div);
             
             // Children container
@@ -532,6 +601,112 @@ function showModal() {
 
 function hideModal() {
     elements.modalOverlay.classList.remove('show');
+}
+
+// ===== Modal de contraseña =====
+function requestPassword(title, onSuccess) {
+    state.pendingPasswordAction = onSuccess;
+    elements.passwordModalTitle.textContent = title;
+    elements.passwordInput.value = '';
+    elements.passwordModalOverlay.classList.add('show');
+    elements.passwordInput.focus();
+}
+
+function hidePasswordModal() {
+    elements.passwordModalOverlay.classList.remove('show');
+    state.pendingPasswordAction = null;
+}
+
+function validatePassword() {
+    const password = elements.passwordInput.value;
+    if (password === 'ODH123') {
+        const action = state.pendingPasswordAction;
+        hidePasswordModal();
+        if (action) {
+            action();
+        }
+    } else {
+        showToast('Contraseña incorrecta', 'error');
+        elements.passwordInput.value = '';
+        elements.passwordInput.focus();
+    }
+}
+
+// ===== Modal de subida de archivos =====
+function showUploadModal(projectId, folderPath) {
+    state.uploadTarget = { projectId, folderPath };
+    elements.uploadTargetPath.textContent = folderPath || '/';
+    elements.fileInput.value = '';
+    elements.uploadModalOverlay.classList.add('show');
+}
+
+function hideUploadModal() {
+    elements.uploadModalOverlay.classList.remove('show');
+    state.uploadTarget = null;
+}
+
+async function uploadFile() {
+    const files = elements.fileInput.files;
+    
+    if (!files || files.length === 0) {
+        showToast('Selecciona al menos un archivo', 'error');
+        return;
+    }
+    
+    if (!state.uploadTarget) {
+        showToast('Error: no se ha seleccionado carpeta destino', 'error');
+        return;
+    }
+    
+    const { projectId, folderPath } = state.uploadTarget;
+    
+    const formData = new FormData();
+    for (const file of files) {
+        formData.append('files', file);
+    }
+    formData.append('folderPath', folderPath);
+    
+    // Cerrar modal primero para evitar problemas de estado
+    hideUploadModal();
+    
+    try {
+        const response = await fetch(`/api/projects/${projectId}/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            showToast(result.error || 'Error al subir archivos', 'error');
+            return;
+        }
+        
+        // Mostrar mensaje de éxito
+        if (result.count === 1) {
+            showToast(`Archivo "${result.uploadedFiles[0]}" subido correctamente`, 'success');
+        } else {
+            showToast(`${result.count} archivos subidos correctamente`, 'success');
+        }
+        
+        // Recargar el árbol del proyecto y expandir la carpeta
+        try {
+            await loadProjectTree(projectId, { skipReadme: true, expandFolder: folderPath });
+        } catch (treeError) {
+            console.error('Error refreshing tree:', treeError);
+        }
+    } catch (error) {
+        console.error('Error uploading files:', error);
+        showToast('Error al subir los archivos', 'error');
+    }
+}
+
+// Función para iniciar subida con contraseña
+function initiateUpload(projectId, folderPath, event) {
+    event.stopPropagation();
+    requestPassword('Subir archivo', () => {
+        showUploadModal(projectId, folderPath);
+    });
 }
 
 function showWelcome() {
@@ -1166,15 +1341,114 @@ async function renderMermaidDiagrams(container) {
             const id = `mermaid-${Date.now()}-${i}`;
             const { svg } = await mermaid.render(id, code);
             
-            const div = document.createElement('div');
-            div.className = 'mermaid-diagram';
-            div.innerHTML = svg;
+            // Crear contenedor con controles de zoom
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mermaid-wrapper';
             
-            pre.replaceWith(div);
+            // Controles de zoom
+            const controls = document.createElement('div');
+            controls.className = 'mermaid-controls';
+            controls.innerHTML = `
+                <button class="mermaid-zoom-btn" data-action="out" title="Reducir">➖</button>
+                <span class="mermaid-zoom-level">100%</span>
+                <button class="mermaid-zoom-btn" data-action="in" title="Ampliar">➕</button>
+                <button class="mermaid-zoom-btn" data-action="reset" title="Restablecer">🔄</button>
+            `;
+            
+            // Contenedor del diagrama
+            const diagramContainer = document.createElement('div');
+            diagramContainer.className = 'mermaid-diagram-container';
+            
+            const diagram = document.createElement('div');
+            diagram.className = 'mermaid-diagram';
+            diagram.innerHTML = svg;
+            diagram.style.transform = 'scale(1)';
+            diagram.dataset.zoom = '1';
+            
+            diagramContainer.appendChild(diagram);
+            wrapper.appendChild(controls);
+            wrapper.appendChild(diagramContainer);
+            
+            // Configurar eventos de zoom y arrastre
+            setupMermaidZoom(controls, diagram);
+            setupMermaidDrag(diagramContainer, diagram);
+            
+            pre.replaceWith(wrapper);
         } catch (error) {
             console.error('Error rendering mermaid:', error);
             // Mantener el código original si hay error
             block.classList.add('mermaid-error');
         }
     }
+}
+
+// Configurar controles de zoom para diagrama Mermaid
+function setupMermaidZoom(controls, diagram) {
+    const zoomLevelSpan = controls.querySelector('.mermaid-zoom-level');
+    const buttons = controls.querySelectorAll('.mermaid-zoom-btn');
+    
+    buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            let currentZoom = parseFloat(diagram.dataset.zoom) || 1;
+            const action = btn.dataset.action;
+            
+            if (action === 'in') {
+                currentZoom = Math.min(currentZoom + 0.25, 3);
+            } else if (action === 'out') {
+                currentZoom = Math.max(currentZoom - 0.25, 0.25);
+            } else if (action === 'reset') {
+                currentZoom = 1;
+            }
+            
+            diagram.dataset.zoom = currentZoom;
+            diagram.style.transform = `scale(${currentZoom})`;
+            zoomLevelSpan.textContent = `${Math.round(currentZoom * 100)}%`;
+        });
+    });
+}
+
+// Configurar arrastre para diagrama Mermaid
+function setupMermaidDrag(container, diagram) {
+    let isDragging = false;
+    let startX, startY, scrollLeft, scrollTop;
+    
+    container.style.cursor = 'grab';
+    
+    container.addEventListener('mousedown', (e) => {
+        // Solo arrastrar con click izquierdo
+        if (e.button !== 0) return;
+        
+        isDragging = true;
+        container.style.cursor = 'grabbing';
+        startX = e.pageX - container.offsetLeft;
+        startY = e.pageY - container.offsetTop;
+        scrollLeft = container.scrollLeft;
+        scrollTop = container.scrollTop;
+        e.preventDefault();
+    });
+    
+    container.addEventListener('mouseleave', () => {
+        if (isDragging) {
+            isDragging = false;
+            container.style.cursor = 'grab';
+        }
+    });
+    
+    container.addEventListener('mouseup', () => {
+        isDragging = false;
+        container.style.cursor = 'grab';
+    });
+    
+    container.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        
+        const x = e.pageX - container.offsetLeft;
+        const y = e.pageY - container.offsetTop;
+        const walkX = (x - startX) * 1.5; // Multiplicador de velocidad
+        const walkY = (y - startY) * 1.5;
+        
+        container.scrollLeft = scrollLeft - walkX;
+        container.scrollTop = scrollTop - walkY;
+    });
 }
