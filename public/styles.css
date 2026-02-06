@@ -242,25 +242,52 @@ body {
     color: var(--accent-danger);
 }
 
-/* ===== Folder Upload Button ===== */
-.folder-upload-btn {
-    opacity: 0;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 2px 4px;
-    font-size: 12px;
-    transition: opacity 0.15s, color 0.15s;
+/* ===== Tree Action Buttons ===== */
+.tree-actions {
+    display: flex;
+    gap: 4px;
     margin-left: auto;
+    opacity: 0;
+    transition: opacity 0.15s;
 }
 
-.tree-item.folder:hover .folder-upload-btn {
+.tree-item:hover .tree-actions,
+.tree-item:hover .file-delete {
     opacity: 1;
 }
 
-.folder-upload-btn:hover {
-    color: var(--accent-primary);
+.tree-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1;
+    transition: all 0.15s;
+}
+
+.tree-action-btn.add-btn:hover {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+.tree-action-btn.delete-btn:hover {
+    background: var(--accent-danger);
+    border-color: var(--accent-danger);
+    color: white;
+}
+
+.tree-action-btn.file-delete {
+    opacity: 0;
+    margin-left: auto;
 }
 
 /* ===== File Tree ===== */

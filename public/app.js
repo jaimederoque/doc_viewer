@@ -446,20 +446,26 @@ function renderTree(items, container, projectId, level = 0) {
                 <span class="tree-toggle" id="folder-toggle-${folderId}">▶</span>
                 <span class="tree-icon ${iconClass}">${folderIcon}</span>
                 <span class="tree-name">${item.name}</span>
-                <button class="folder-upload-btn" title="Subir archivo">📤</button>
+                <div class="tree-actions">
+                    <button class="tree-action-btn add-btn" title="Subir archivo">+</button>
+                    <button class="tree-action-btn delete-btn" title="Eliminar carpeta">×</button>
+                </div>
             `;
             
             // Click en la carpeta para expandir/contraer
             div.onclick = (e) => {
                 e.stopPropagation();
-                // Si el click fue en el botón de subir, no expandir
-                if (e.target.classList.contains('folder-upload-btn')) return;
+                // Si el click fue en un botón de acción, no expandir
+                if (e.target.classList.contains('tree-action-btn')) return;
                 toggleFolder(folderId);
             };
             
-            // Añadir listener al botón de subir
-            const uploadBtn = div.querySelector('.folder-upload-btn');
-            uploadBtn.addEventListener('click', (e) => initiateUpload(projectId, item.path, e));
+            // Añadir listeners a los botones
+            const addBtn = div.querySelector('.add-btn');
+            addBtn.addEventListener('click', (e) => initiateUpload(projectId, item.path, e));
+            
+            const deleteBtn = div.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', (e) => initiateDelete(projectId, item.path, item.name, 'folder', e));
             
             container.appendChild(div);
             
@@ -504,11 +510,17 @@ function renderTree(items, container, projectId, level = 0) {
                 <span class="tree-icon ${iconClass}">${icon}</span>
                 <span class="tree-name">${item.name}</span>
                 ${hasDoc}
+                <button class="tree-action-btn delete-btn file-delete" title="Eliminar archivo">×</button>
             `;
             div.onclick = (e) => {
                 e.stopPropagation();
+                if (e.target.classList.contains('tree-action-btn')) return;
                 loadFile(projectId, item.path, item.fileType);
             };
+            
+            const deleteBtn = div.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', (e) => initiateDelete(projectId, item.path, item.name, 'file', e));
+            
             container.appendChild(div);
         }
     });
@@ -707,6 +719,51 @@ function initiateUpload(projectId, folderPath, event) {
     requestPassword('Subir archivo', () => {
         showUploadModal(projectId, folderPath);
     });
+}
+
+// Función para iniciar eliminación con contraseña
+function initiateDelete(projectId, filePath, fileName, type, event) {
+    event.stopPropagation();
+    const typeText = type === 'folder' ? 'la carpeta' : 'el archivo';
+    requestPassword(`Eliminar ${typeText} "${fileName}"`, () => {
+        deleteItem(projectId, filePath, fileName, type);
+    });
+}
+
+// Función para eliminar archivo o carpeta
+async function deleteItem(projectId, filePath, fileName, type) {
+    try {
+        const response = await fetch(`/api/projects/${projectId}/file`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ filePath })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            showToast(result.error || 'Error al eliminar', 'error');
+            return;
+        }
+        
+        const typeText = type === 'folder' ? 'Carpeta' : 'Archivo';
+        showToast(`${typeText} "${fileName}" eliminado correctamente`, 'success');
+        
+        // Obtener la carpeta padre para expandirla después
+        const parentFolder = filePath.split(/[\/\\]/).slice(0, -1).join('/');
+        
+        // Recargar el árbol del proyecto
+        try {
+            await loadProjectTree(projectId, { skipReadme: true, expandFolder: parentFolder });
+        } catch (treeError) {
+            console.error('Error refreshing tree:', treeError);
+        }
+    } catch (error) {
+        console.error('Error deleting item:', error);
+        showToast('Error al eliminar', 'error');
+    }
 }
 
 function showWelcome() {

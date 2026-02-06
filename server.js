@@ -152,6 +152,55 @@ app.post('/api/projects/:id/upload', upload.array('files', 20), (req, res) => {
     }
 });
 
+// Eliminar archivo o carpeta de un proyecto
+app.delete('/api/projects/:id/file', (req, res) => {
+    const { id } = req.params;
+    const { filePath } = req.body;
+    
+    const project = projects.find(p => p.id === id);
+    
+    if (!project) {
+        return res.status(404).json({ error: 'Proyecto no encontrado' });
+    }
+
+    if (!filePath) {
+        return res.status(400).json({ error: 'No se ha especificado la ruta' });
+    }
+
+    const targetPath = path.join(project.path, filePath);
+    
+    // Verificar que el archivo/carpeta está dentro del proyecto (seguridad)
+    if (!targetPath.startsWith(project.path)) {
+        return res.status(403).json({ error: 'Acceso denegado' });
+    }
+
+    // Verificar que existe
+    if (!fs.existsSync(targetPath)) {
+        return res.status(404).json({ error: 'El archivo o carpeta no existe' });
+    }
+
+    try {
+        const stats = fs.statSync(targetPath);
+        
+        if (stats.isDirectory()) {
+            // Eliminar carpeta recursivamente
+            fs.rmSync(targetPath, { recursive: true, force: true });
+        } else {
+            // Eliminar archivo
+            fs.unlinkSync(targetPath);
+        }
+        
+        res.json({ 
+            success: true, 
+            deleted: filePath,
+            type: stats.isDirectory() ? 'folder' : 'file'
+        });
+    } catch (error) {
+        console.error('Error deleting file/folder:', error);
+        res.status(500).json({ error: 'Error al eliminar' });
+    }
+});
+
 // Obtener estructura de archivos de un proyecto
 app.get('/api/projects/:id/tree', (req, res) => {
     const { id } = req.params;
