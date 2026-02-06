@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: doc-viewer
+  labels:
+    app: doc-viewer
+spec:
+  type: ClusterIP          # Servicio interno del cluster
+  selector:
+    app: doc-viewer
+  ports:
+    - port: 3001           # Puerto del servicio
+      targetPort: 3001     # Puerto del contenedor
+      protocol: TCP
+      name: http

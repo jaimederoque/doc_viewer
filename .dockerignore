@@ -1,0 +1,26 @@
+# Dependencias
+node_modules
+
+# Archivos de desarrollo
+.git
+.gitignore
+.vscode
+*.md
+!README.md
+
+# Archivos de log
+*.log
+npm-debug.log*
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Datos locales (se usará volumen persistente)
+projects.json
+
+# Archivos de Kubernetes (no necesarios en la imagen)
+k8s/
+
+# Archivos de documentación
+prompt.md

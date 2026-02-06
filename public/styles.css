@@ -23,6 +23,8 @@
     --header-height: 50px;
     
     --java-color: #e76f00;
+    --js-color: #f7df1e;
+    --ts-color: #3178c6;
     --md-color: #519aba;
     --folder-color: #dcb67a;
 }
@@ -291,6 +293,14 @@ body {
 
 .tree-icon.java {
     color: var(--java-color);
+}
+
+.tree-icon.javascript {
+    color: var(--js-color);
+}
+
+.tree-icon.typescript {
+    color: var(--ts-color);
 }
 
 .tree-icon.markdown {
@@ -1311,19 +1321,34 @@ body {
     border: 1px solid var(--text-muted);
 }
 
-/* ===== Diff Minimap (barra de navegación de diferencias) ===== */
+/* ===== Diff Minimap (barra de navegación de diferencias y scroll) ===== */
 .diff-container {
     display: flex;
     flex: 1;
     overflow: hidden;
 }
 
+/* Ocultar scrollbar nativa del contenido YAML */
+.yaml-content {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+.yaml-content::-webkit-scrollbar {
+    display: none; /* Chrome/Safari/Opera */
+}
+
 .diff-minimap {
-    width: 14px;
-    background-color: var(--bg-secondary);
+    width: 16px;
+    background-color: var(--bg-tertiary);
     border-left: 1px solid var(--border-color);
     position: relative;
     flex-shrink: 0;
+    cursor: pointer;
+}
+
+.diff-minimap:hover {
+    background-color: var(--bg-hover);
 }
 
 .diff-minimap-marker {
@@ -1332,12 +1357,8 @@ body {
     right: 2px;
     min-height: 3px;
     border-radius: 1px;
-    cursor: pointer;
+    pointer-events: none;
     transition: opacity 0.15s;
-}
-
-.diff-minimap-marker:hover {
-    opacity: 0.8;
 }
 
 .diff-minimap-marker.added {
@@ -1352,9 +1373,20 @@ body {
     position: absolute;
     left: 0;
     right: 0;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    pointer-events: none;
+    background-color: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    cursor: grab;
+    transition: background-color 0.1s;
+}
+
+.diff-minimap-viewport:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+.diff-minimap-viewport.dragging {
+    cursor: grabbing;
+    background-color: rgba(255, 255, 255, 0.3);
 }
 
 /* Swagger tabs styling */

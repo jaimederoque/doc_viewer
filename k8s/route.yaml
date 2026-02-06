@@ -1,0 +1,19 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: doc-viewer
+  labels:
+    app: doc-viewer
+spec:
+  to:
+    kind: Service
+    name: doc-viewer
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge              # HTTPS con terminación en el router
+    insecureEdgeTerminationPolicy: Redirect   # Redirige HTTP a HTTPS
+  wildcardPolicy: None
+# La URL será asignada automáticamente por OpenShift
+# Formato típico: doc-viewer-<namespace>.apps.<cluster-domain>

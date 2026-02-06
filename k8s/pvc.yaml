@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: doc-viewer-data
+  labels:
+    app: doc-viewer
+spec:
+  accessModes:
+    - ReadWriteOnce      # Un solo pod puede escribir a la vez
+  resources:
+    requests:
+      storage: 500Mi     # 100MB es suficiente para projects.json
+  # storageClassName: standard  # Descomenta y ajusta según tu cluster OpenShift

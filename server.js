@@ -6,6 +6,9 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Ruta de datos persistentes (configurable por variable de entorno para OpenShift)
+const DATA_PATH = process.env.DATA_PATH || __dirname;
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -13,7 +16,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Almacén de proyectos registrados
 let projects = [];
-const projectsFilePath = path.join(__dirname, 'projects.json');
+const projectsFilePath = path.join(DATA_PATH, 'projects.json');
 
 // Cargar proyectos guardados al iniciar
 function loadProjects() {
@@ -138,10 +141,12 @@ function buildFileTree(basePath, currentPath, relativePath = '') {
             } else if (entry.isFile()) {
                 const ext = path.extname(entry.name).toLowerCase();
                 
-                // Solo incluir archivos Java, Markdown y YAML (swagger)
-                if (['.java', '.md', '.yml', '.yaml'].includes(ext)) {
+                // Solo incluir archivos Java, JavaScript, TypeScript, Markdown y YAML (swagger)
+                if (['.java', '.js', '.ts', '.md', '.yml', '.yaml'].includes(ext)) {
                     let fileType = 'markdown';
                     if (ext === '.java') fileType = 'java';
+                    else if (ext === '.js') fileType = 'javascript';
+                    else if (ext === '.ts') fileType = 'typescript';
                     else if (ext === '.yml' || ext === '.yaml') fileType = 'swagger';
                     
                     const item = {
@@ -151,19 +156,19 @@ function buildFileTree(basePath, currentPath, relativePath = '') {
                         fileType
                     };
                     
-                    // Si es un archivo Java, buscar su documentación
-                    if (ext === '.java') {
-                        const docPath = findDocumentation(currentPath, entry.name);
+                    // Si es un archivo de código, buscar su documentación
+                    if (['.java', '.js', '.ts'].includes(ext)) {
+                        const docPath = findDocumentation(currentPath, entry.name, ext);
                         if (docPath) {
                             item.docPath = docPath;
                         }
                     }
                     
-                    // Si es un archivo MD, buscar el Java correspondiente
+                    // Si es un archivo MD, buscar el archivo de código correspondiente
                     if (ext === '.md') {
-                        const javaPath = findJavaFile(basePath, currentPath, entry.name);
-                        if (javaPath) {
-                            item.javaPath = javaPath;
+                        const sourcePath = findSourceFile(basePath, currentPath, entry.name);
+                        if (sourcePath) {
+                            item.sourcePath = sourcePath;
                         }
                     }
                     
@@ -185,9 +190,9 @@ function buildFileTree(basePath, currentPath, relativePath = '') {
     return items;
 }
 
-// Buscar documentación para un archivo Java
-function findDocumentation(currentPath, javaFileName) {
-    const baseName = javaFileName.replace('.java', '');
+// Buscar documentación para un archivo de código (Java, JS, TS)
+function findDocumentation(currentPath, fileName, ext) {
+    const baseName = fileName.replace(ext, '');
     const docsPath = path.join(currentPath, 'docs', `${baseName}.md`);
     
     if (fs.existsSync(docsPath)) {
@@ -198,17 +203,21 @@ function findDocumentation(currentPath, javaFileName) {
     return null;
 }
 
-// Buscar archivo Java correspondiente a un MD
-function findJavaFile(basePath, currentPath, mdFileName) {
+// Buscar archivo de código correspondiente a un MD (Java, JS, TS)
+function findSourceFile(basePath, currentPath, mdFileName) {
     const baseName = mdFileName.replace('.md', '');
     
     // Si estamos en una carpeta docs, buscar en el directorio padre
     if (path.basename(currentPath) === 'docs') {
         const parentPath = path.dirname(currentPath);
-        const javaPath = path.join(parentPath, `${baseName}.java`);
         
-        if (fs.existsSync(javaPath)) {
-            return path.relative(basePath, javaPath).split(path.sep).join('/');
+        // Buscar en orden: .java, .js, .ts
+        const extensions = ['.java', '.js', '.ts'];
+        for (const ext of extensions) {
+            const sourcePath = path.join(parentPath, `${baseName}${ext}`);
+            if (fs.existsSync(sourcePath)) {
+                return path.relative(basePath, sourcePath).split(path.sep).join('/');
+            }
         }
     }
     
@@ -243,6 +252,8 @@ app.get('/api/projects/:id/file', (req, res) => {
         
         let fileType = 'markdown';
         if (ext === '.java') fileType = 'java';
+        else if (ext === '.js') fileType = 'javascript';
+        else if (ext === '.ts') fileType = 'typescript';
         else if (ext === '.yml' || ext === '.yaml') fileType = 'swagger';
         
         res.json({
@@ -255,10 +266,12 @@ app.get('/api/projects/:id/file', (req, res) => {
     }
 });
 
-// Buscar documentación de un archivo Java
+// Buscar documentación de un archivo de código (Java, JS, TS)
 app.get('/api/projects/:id/doc', (req, res) => {
     const { id } = req.params;
-    const { javaPath } = req.query;
+    const { sourcePath } = req.query;
+    // Mantener compatibilidad con javaPath
+    const filePath = sourcePath || req.query.javaPath;
     
     const project = projects.find(p => p.id === id);
     
@@ -266,14 +279,15 @@ app.get('/api/projects/:id/doc', (req, res) => {
         return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    if (!javaPath) {
-        return res.status(400).json({ error: 'Ruta de archivo Java requerida' });
+    if (!filePath) {
+        return res.status(400).json({ error: 'Ruta de archivo de código requerida' });
     }
 
-    // Construir ruta al MD
-    const javaDir = path.dirname(javaPath);
-    const javaName = path.basename(javaPath, '.java');
-    const mdRelativePath = path.join(javaDir, 'docs', `${javaName}.md`);
+    // Construir ruta al MD - detectar extensión automáticamente
+    const sourceDir = path.dirname(filePath);
+    const ext = path.extname(filePath);
+    const sourceName = path.basename(filePath, ext);
+    const mdRelativePath = path.join(sourceDir, 'docs', `${sourceName}.md`);
     const mdFullPath = path.join(project.path, mdRelativePath);
 
     try {
@@ -282,7 +296,7 @@ app.get('/api/projects/:id/doc', (req, res) => {
             res.json({
                 content,
                 path: mdRelativePath.split(path.sep).join('/'),
-                fileName: `${javaName}.md`
+                fileName: `${sourceName}.md`
             });
         } else {
             res.status(404).json({ error: 'Documentación no encontrada' });
@@ -300,6 +314,7 @@ app.get('/', (req, res) => {
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log(`\n🚀 Servidor de documentación iniciado en http://localhost:${PORT}`);
+    console.log(`📁 Datos persistentes en: ${DATA_PATH}`);
     console.log(`\n📂 Proyectos registrados: ${projects.length}`);
     projects.forEach(p => console.log(`   - ${p.name}: ${p.path}`));
     console.log('\n');

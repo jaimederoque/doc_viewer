@@ -239,8 +239,16 @@ async function loadFile(projectId, filePath, fileType) {
             setSwaggerMode(false);
         }
         
-        // Mostrar código
-        elements.codeContent.className = 'language-java'; // Reset classes
+        // Mostrar código - clase de lenguaje dinámica
+        const langClass = {
+            'java': 'language-java',
+            'javascript': 'language-javascript',
+            'typescript': 'language-typescript',
+            'markdown': 'language-markdown',
+            'swagger': 'language-yaml'
+        }[fileType] || 'language-plaintext';
+        
+        elements.codeContent.className = langClass;
         elements.codeContent.textContent = data.content;
         elements.codeFileName.textContent = data.fileName;
         elements.currentFilePath.textContent = filePath;
@@ -252,8 +260,8 @@ async function loadFile(projectId, filePath, fileType) {
         // Añadir números de línea
         addLineNumbers(data.content);
         
-        // Cargar documentación si es un archivo Java
-        if (fileType === 'java') {
+        // Cargar documentación si es un archivo de código (Java, JS, TS)
+        if (['java', 'javascript', 'typescript'].includes(fileType)) {
             await loadDocumentation(projectId, filePath);
             elements.goToDocBtn.style.display = 'inline-flex';
             elements.goToCodeBtn.style.display = 'none';
@@ -296,9 +304,9 @@ async function loadFile(projectId, filePath, fileType) {
     }
 }
 
-async function loadDocumentation(projectId, javaPath) {
+async function loadDocumentation(projectId, sourcePath) {
     try {
-        const response = await fetch(`/api/projects/${projectId}/doc?javaPath=${encodeURIComponent(javaPath)}`);
+        const response = await fetch(`/api/projects/${projectId}/doc?sourcePath=${encodeURIComponent(sourcePath)}`);
         
         if (!response.ok) {
             state.currentDoc = null;
@@ -366,21 +374,24 @@ function renderTree(items, container, projectId, level = 0) {
                 iconClass = 'swagger-folder';
             }
             
+            // ID único: combina projectId + path para evitar colisiones entre proyectos
+            const folderId = `${projectId}-${item.path.replace(/[\/\\]/g, '-')}`;
+            
             div.innerHTML = `
-                <span class="tree-toggle" id="folder-toggle-${item.path.replace(/[\/\\]/g, '-')}">▶</span>
+                <span class="tree-toggle" id="folder-toggle-${folderId}">▶</span>
                 <span class="tree-icon ${iconClass}">${folderIcon}</span>
                 <span class="tree-name">${item.name}</span>
             `;
             div.onclick = (e) => {
                 e.stopPropagation();
-                toggleFolder(item.path.replace(/[\/\\]/g, '-'));
+                toggleFolder(folderId);
             };
             container.appendChild(div);
             
             // Children container
             const childrenContainer = document.createElement('div');
             childrenContainer.className = 'tree-children';
-            childrenContainer.id = `folder-children-${item.path.replace(/[\/\\]/g, '-')}`;
+            childrenContainer.id = `folder-children-${folderId}`;
             childrenContainer.style.display = 'none';
             container.appendChild(childrenContainer);
             
@@ -397,6 +408,12 @@ function renderTree(items, container, projectId, level = 0) {
             if (item.fileType === 'java') {
                 icon = '☕';
                 iconClass = 'java';
+            } else if (item.fileType === 'javascript') {
+                icon = '🟡';
+                iconClass = 'javascript';
+            } else if (item.fileType === 'typescript') {
+                icon = '🔷';
+                iconClass = 'typescript';
             } else if (item.fileType === 'swagger') {
                 icon = '📡';
                 iconClass = 'swagger';
@@ -480,7 +497,7 @@ function switchTab(tab) {
             break;
         case 'docs':
             elements.docsPanel.style.display = 'flex';
-            elements.goToCodeBtn.style.display = state.currentFile?.fileType === 'java' ? 'inline-flex' : 'none';
+            elements.goToCodeBtn.style.display = ['java', 'javascript', 'typescript'].includes(state.currentFile?.fileType) ? 'inline-flex' : 'none';
             break;
         case 'split':
             viewerContent.classList.add('split');
@@ -836,7 +853,7 @@ function renderDiffView(diff, leftLines, rightLines) {
     updateMinimapViewport(elements.yamlRightContent, elements.diffMinimapRight, diff.length);
 }
 
-// Función para renderizar el minimap
+// Función para renderizar el minimap (funciona como scrollbar)
 function renderMinimap(minimapElement, diffMarkers, totalLines, contentElement, highlightType) {
     minimapElement.innerHTML = '';
     
@@ -859,7 +876,7 @@ function renderMinimap(minimapElement, diffMarkers, totalLines, contentElement, 
     }
     if (currentGroup) groups.push(currentGroup);
     
-    // Crear marcadores visuales
+    // Crear marcadores visuales (solo como indicadores, no clickeables)
     for (const group of groups) {
         const marker = document.createElement('div');
         marker.className = `diff-minimap-marker ${group.type}`;
@@ -870,22 +887,77 @@ function renderMinimap(minimapElement, diffMarkers, totalLines, contentElement, 
         marker.style.top = `${top}px`;
         marker.style.height = `${height}px`;
         
-        // Click para navegar
-        marker.addEventListener('click', () => {
-            const targetLine = contentElement.querySelector(`[data-line="${group.startLine}"]`);
-            if (targetLine) {
-                targetLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        });
-        
         minimapElement.appendChild(marker);
     }
     
-    // Añadir viewport indicator
+    // Añadir viewport indicator (arrastrable)
     const viewport = document.createElement('div');
     viewport.className = 'diff-minimap-viewport';
     viewport.id = `viewport-${minimapElement.id}`;
     minimapElement.appendChild(viewport);
+    
+    // Click en el minimap para navegar directamente
+    minimapElement.addEventListener('click', (e) => {
+        if (e.target === viewport) return; // Ignorar clicks en el viewport
+        
+        const rect = minimapElement.getBoundingClientRect();
+        const clickY = e.clientY - rect.top;
+        const currentMinimapHeight = minimapElement.clientHeight;
+        const scrollRatio = clickY / currentMinimapHeight;
+        const maxScroll = contentElement.scrollHeight - contentElement.clientHeight;
+        
+        contentElement.scrollTo({
+            top: scrollRatio * maxScroll,
+            behavior: 'smooth'
+        });
+    });
+    
+    // Scroll con rueda del ratón sobre el minimap
+    minimapElement.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        contentElement.scrollTop += e.deltaY;
+    }, { passive: false });
+    
+    // Hacer el viewport arrastrable
+    setupMinimapDrag(viewport, minimapElement, contentElement);
+}
+
+// Configurar arrastre del viewport del minimap
+function setupMinimapDrag(viewport, minimapElement, contentElement) {
+    let isDragging = false;
+    let startY = 0;
+    let startScrollTop = 0;
+    
+    viewport.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startY = e.clientY;
+        startScrollTop = contentElement.scrollTop;
+        viewport.classList.add('dragging');
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        const minimapHeight = minimapElement.clientHeight;
+        const contentScrollHeight = contentElement.scrollHeight;
+        const contentClientHeight = contentElement.clientHeight;
+        const maxScroll = contentScrollHeight - contentClientHeight;
+        
+        // Calcular el ratio de movimiento
+        const deltaY = e.clientY - startY;
+        const scrollRatio = contentScrollHeight / minimapHeight;
+        const newScrollTop = startScrollTop + (deltaY * scrollRatio);
+        
+        contentElement.scrollTop = Math.max(0, Math.min(maxScroll, newScrollTop));
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            viewport.classList.remove('dragging');
+        }
+    });
 }
 
 // Función para actualizar el viewport del minimap
