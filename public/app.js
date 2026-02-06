@@ -117,6 +117,93 @@ function setupEventListeners() {
     
     // Botón de comparar Swagger
     elements.compareSwaggerBtn.addEventListener('click', compareSwaggers);
+    
+    // Toggle de tema
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+    }
+    
+    // Aplicar tema guardado
+    initTheme();
+}
+
+// ===== Theme Functions =====
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+        applyTheme(savedTheme);
+    } else {
+        // Detectar preferencia del sistema
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = prefersDark ? 'dark' : 'light';
+        applyTheme(theme);
+    }
+}
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    updateMermaidTheme(theme);
+    updateHljsTheme(theme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    
+    applyTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    showToast(`Tema ${newTheme === 'dark' ? 'oscuro' : 'claro'} activado`, 'success');
+}
+
+function updateHljsTheme(theme) {
+    const darkTheme = document.getElementById('hljs-theme-dark');
+    const lightTheme = document.getElementById('hljs-theme-light');
+    
+    if (darkTheme && lightTheme) {
+        if (theme === 'dark') {
+            darkTheme.disabled = false;
+            lightTheme.disabled = true;
+        } else {
+            darkTheme.disabled = true;
+            lightTheme.disabled = false;
+        }
+    }
+}
+
+function updateMermaidTheme(theme) {
+    mermaid.initialize({
+        startOnLoad: false,
+        theme: theme === 'dark' ? 'dark' : 'default',
+        themeVariables: theme === 'dark' ? {
+            primaryColor: '#2f81f7',
+            primaryTextColor: '#e6edf3',
+            primaryBorderColor: '#30363d',
+            lineColor: '#8b949e',
+            secondaryColor: '#21262d',
+            tertiaryColor: '#161b22',
+            background: '#0d1117',
+            mainBkg: '#21262d',
+            secondBkg: '#161b22',
+            border1: '#30363d',
+            border2: '#30363d',
+            fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, Noto Sans, Helvetica, Arial, sans-serif'
+        } : {
+            primaryColor: '#0969da',
+            primaryTextColor: '#1f2328',
+            primaryBorderColor: '#d0d7de',
+            lineColor: '#656d76',
+            secondaryColor: '#f6f8fa',
+            tertiaryColor: '#eaeef2',
+            background: '#ffffff',
+            mainBkg: '#f6f8fa',
+            secondBkg: '#eaeef2',
+            border1: '#d0d7de',
+            border2: '#d0d7de',
+            fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, Noto Sans, Helvetica, Arial, sans-serif'
+        }
+    });
 }
 
 // ===== API Functions =====
@@ -1380,26 +1467,6 @@ marked.setOptions({
     breaks: true,
     gfm: true,
     headerIds: true
-});
-
-// Configurar Mermaid
-mermaid.initialize({
-    startOnLoad: false,
-    theme: 'dark',
-    themeVariables: {
-        primaryColor: '#0078d4',
-        primaryTextColor: '#fff',
-        primaryBorderColor: '#3e3e3e',
-        lineColor: '#6e6e6e',
-        secondaryColor: '#252526',
-        tertiaryColor: '#2d2d2d',
-        background: '#1e1e1e',
-        mainBkg: '#252526',
-        secondBkg: '#2d2d2d',
-        border1: '#3e3e3e',
-        border2: '#3e3e3e',
-        fontFamily: 'Segoe UI, sans-serif'
-    }
 });
 
 // Función para decodificar contenido comprimido de DrawIO

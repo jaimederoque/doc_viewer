@@ -6,7 +6,8 @@
     <title>Documentación Operational Data Hub (ODH)</title>
     
     <!-- Highlight.js para syntax highlighting -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-theme-dark">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-theme-light" disabled>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/java.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/yaml.min.js"></script>
@@ -38,6 +39,10 @@
                 <h1>Documentación Operational Data Hub (ODH)</h1>
             </div>
             <div class="header-right">
+                <button id="themeToggle" class="theme-toggle" title="Cambiar tema">
+                    <span class="icon-sun">☀️</span>
+                    <span class="icon-moon">🌙</span>
+                </button>
                 <button id="addProjectBtn" class="btn btn-primary">
                     <span class="icon">+</span> Añadir Proyecto
                 </button>
@@ -71,7 +76,7 @@
                     <!-- Tabs normales (código/docs) -->
                     <div class="viewer-tabs" id="normalTabs">
                         <button class="tab-btn active" data-tab="code" id="codeTab">
-                            <span class="tab-icon">☕</span> Código Java
+                            <span class="tab-icon">&lt;/&gt;</span> Código
                         </button>
                         <button class="tab-btn" data-tab="docs" id="docsTab">
                             <span class="tab-icon">📄</span> Documentación
