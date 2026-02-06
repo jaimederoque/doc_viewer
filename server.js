@@ -141,13 +141,14 @@ function buildFileTree(basePath, currentPath, relativePath = '') {
             } else if (entry.isFile()) {
                 const ext = path.extname(entry.name).toLowerCase();
                 
-                // Solo incluir archivos Java, JavaScript, TypeScript, Markdown y YAML (swagger)
-                if (['.java', '.js', '.ts', '.md', '.yml', '.yaml'].includes(ext)) {
+                // Solo incluir archivos Java, JavaScript, TypeScript, Markdown, YAML (swagger) y DrawIO
+                if (['.java', '.js', '.ts', '.md', '.yml', '.yaml', '.drawio'].includes(ext)) {
                     let fileType = 'markdown';
                     if (ext === '.java') fileType = 'java';
                     else if (ext === '.js') fileType = 'javascript';
                     else if (ext === '.ts') fileType = 'typescript';
                     else if (ext === '.yml' || ext === '.yaml') fileType = 'swagger';
+                    else if (ext === '.drawio') fileType = 'drawio';
                     
                     const item = {
                         name: entry.name,
@@ -255,6 +256,7 @@ app.get('/api/projects/:id/file', (req, res) => {
         else if (ext === '.js') fileType = 'javascript';
         else if (ext === '.ts') fileType = 'typescript';
         else if (ext === '.yml' || ext === '.yaml') fileType = 'swagger';
+        else if (ext === '.drawio') fileType = 'drawio';
         
         res.json({
             content,
@@ -263,6 +265,51 @@ app.get('/api/projects/:id/file', (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ error: 'Error al leer el archivo' });
+    }
+});
+
+// Servir archivo raw (para uso en iframes externos como diagrams.net)
+app.get('/api/projects/:id/raw', (req, res) => {
+    const { id } = req.params;
+    const { path: filePath } = req.query;
+    
+    const project = projects.find(p => p.id === id);
+    
+    if (!project) {
+        return res.status(404).send('Proyecto no encontrado');
+    }
+
+    if (!filePath) {
+        return res.status(400).send('Ruta de archivo requerida');
+    }
+
+    const fullPath = path.join(project.path, filePath);
+    
+    // Verificar que el archivo está dentro del proyecto (seguridad)
+    if (!fullPath.startsWith(project.path)) {
+        return res.status(403).send('Acceso denegado');
+    }
+
+    try {
+        const ext = path.extname(filePath).toLowerCase();
+        
+        // Configurar content-type según extensión
+        const mimeTypes = {
+            '.drawio': 'application/xml',
+            '.xml': 'application/xml',
+            '.svg': 'image/svg+xml',
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg'
+        };
+        
+        const contentType = mimeTypes[ext] || 'text/plain';
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        
+        res.sendFile(fullPath);
+    } catch (error) {
+        res.status(500).send('Error al leer el archivo');
     }
 });
 

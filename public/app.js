@@ -284,6 +284,12 @@ async function loadFile(projectId, filePath, fileType) {
             elements.goToDocBtn.style.display = 'none';
             elements.goToCodeBtn.style.display = 'none';
             switchTab('docs');
+        } else if (fileType === 'drawio') {
+            // Si es un DrawIO, mostrarlo en el panel de docs con visor embebido
+            await loadDrawio(data.content, data.fileName);
+            elements.goToDocBtn.style.display = 'none';
+            elements.goToCodeBtn.style.display = 'none';
+            switchTab('docs');
         } else if (fileType === 'swagger') {
             // Mostrar Swagger UI
             await loadSwagger(projectId, filePath, data);
@@ -417,6 +423,9 @@ function renderTree(items, container, projectId, level = 0) {
             } else if (item.fileType === 'swagger') {
                 icon = '📡';
                 iconClass = 'swagger';
+            } else if (item.fileType === 'drawio') {
+                icon = '🖼️';
+                iconClass = 'drawio';
             }
             
             const hasDoc = item.docPath ? '<span class="tree-badge">DOC</span>' : '';
@@ -1047,6 +1056,102 @@ mermaid.initialize({
         fontFamily: 'Segoe UI, sans-serif'
     }
 });
+
+// Función para decodificar contenido comprimido de DrawIO
+function decodeDrawioContent(compressedData) {
+    try {
+        // Paso 1: Base64 decode
+        const decoded = atob(compressedData);
+        
+        // Paso 2: Convert to Uint8Array
+        const uint8Array = new Uint8Array(decoded.length);
+        for (let i = 0; i < decoded.length; i++) {
+            uint8Array[i] = decoded.charCodeAt(i);
+        }
+        
+        // Paso 3: Inflate con pako
+        const inflated = pako.inflateRaw(uint8Array, { to: 'string' });
+        
+        // Paso 4: URL decode
+        return decodeURIComponent(inflated);
+    } catch (e) {
+        console.error('Error decodificando DrawIO:', e);
+        return null;
+    }
+}
+
+// Función para comprimir contenido para el visor de DrawIO
+function encodeDrawioContent(xmlContent) {
+    try {
+        // Paso 1: URL encode
+        const urlEncoded = encodeURIComponent(xmlContent);
+        
+        // Paso 2: Deflate con pako
+        const deflated = pako.deflateRaw(urlEncoded);
+        
+        // Paso 3: Base64 encode
+        let binary = '';
+        for (let i = 0; i < deflated.length; i++) {
+            binary += String.fromCharCode(deflated[i]);
+        }
+        return btoa(binary);
+    } catch (e) {
+        console.error('Error codificando DrawIO:', e);
+        return null;
+    }
+}
+
+// Función para cargar y mostrar archivos DrawIO
+async function loadDrawio(xmlContent, fileName) {
+    // Intentar crear URL para el visor embebido
+    let viewerHtml = '';
+    
+    try {
+        // Comprimir el XML para el visor
+        const compressed = encodeDrawioContent(xmlContent);
+        
+        if (compressed) {
+            const viewerUrl = `https://viewer.diagrams.net/?tags=%7B%7D&highlight=0000ff&nav=1&title=${encodeURIComponent(fileName)}&lightbox=1#R${compressed}`;
+            
+            viewerHtml = `
+                <iframe 
+                    class="drawio-viewer" 
+                    src="${viewerUrl}"
+                    frameborder="0"
+                    allowfullscreen
+                ></iframe>
+            `;
+        }
+    } catch (e) {
+        console.error('Error preparando visor DrawIO:', e);
+    }
+    
+    // Si no se pudo crear el visor, mostrar placeholder
+    if (!viewerHtml) {
+        viewerHtml = `
+            <div class="drawio-placeholder">
+                <div class="drawio-placeholder-icon">📐</div>
+                <h3>Diagrama DrawIO</h3>
+                <p>No se pudo cargar el visor del diagrama</p>
+            </div>
+        `;
+    }
+    
+    elements.docsContent.innerHTML = `
+        <div class="drawio-container">
+            <div class="drawio-header">
+                <span class="drawio-icon">🖼️</span>
+                <span class="drawio-title">${fileName}</span>
+            </div>
+            <div class="drawio-preview">
+                ${viewerHtml}
+            </div>
+        </div>
+    `;
+    
+    elements.docsFileName.textContent = fileName;
+    state.currentDoc = { path: fileName, content: xmlContent };
+}
 
 // Función para renderizar diagramas Mermaid
 async function renderMermaidDiagrams(container) {
