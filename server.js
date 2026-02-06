@@ -218,6 +218,69 @@ app.get('/api/projects/:id/tree', (req, res) => {
     }
 });
 
+// Buscar texto en archivos de un proyecto
+app.get('/api/projects/:id/search', (req, res) => {
+    const { id } = req.params;
+    const { q } = req.query;
+    
+    const project = projects.find(p => p.id === id);
+    
+    if (!project) {
+        return res.status(404).json({ error: 'Proyecto no encontrado' });
+    }
+
+    if (!q || q.trim().length === 0) {
+        return res.status(400).json({ error: 'Texto de búsqueda requerido' });
+    }
+
+    const searchTerm = q.toLowerCase();
+    const matchingFiles = [];
+    const searchableExtensions = ['.java', '.js', '.ts', '.md', '.yml', '.yaml', '.drawio'];
+
+    function searchInDirectory(dirPath, relativePath = '') {
+        try {
+            const items = fs.readdirSync(dirPath);
+            
+            for (const item of items) {
+                const fullPath = path.join(dirPath, item);
+                const itemRelativePath = relativePath ? `${relativePath}/${item}` : item;
+                
+                try {
+                    const stats = fs.statSync(fullPath);
+                    
+                    if (stats.isDirectory()) {
+                        searchInDirectory(fullPath, itemRelativePath);
+                    } else {
+                        const ext = path.extname(item).toLowerCase();
+                        if (searchableExtensions.includes(ext)) {
+                            try {
+                                const content = fs.readFileSync(fullPath, 'utf8');
+                                if (content.toLowerCase().includes(searchTerm)) {
+                                    matchingFiles.push(itemRelativePath);
+                                }
+                            } catch (readError) {
+                                // Ignorar archivos que no se pueden leer
+                            }
+                        }
+                    }
+                } catch (statError) {
+                    // Ignorar errores de stat
+                }
+            }
+        } catch (error) {
+            // Ignorar errores de lectura de directorio
+        }
+    }
+
+    searchInDirectory(project.path);
+    
+    res.json({ 
+        searchTerm: q,
+        matchingFiles,
+        count: matchingFiles.length
+    });
+});
+
 // Construir árbol de archivos
 function buildFileTree(basePath, currentPath, relativePath = '') {
     const items = [];

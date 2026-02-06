@@ -388,11 +388,29 @@ function renderProjects() {
                 <span class="project-toggle" id="toggle-${project.id}">▶</span>
                 <span class="project-icon">📁</span>
                 <span class="project-name" title="${project.path}">${project.name}</span>
-                <button class="project-delete" onclick="deleteProject('${project.id}', event)" title="Eliminar">🗑</button>
+                <button class="project-action-btn project-search" onclick="toggleProjectSearch('${project.id}', event)" title="Buscar">🔍</button>
+                <button class="project-action-btn project-delete" onclick="deleteProject('${project.id}', event)" title="Eliminar">🗑</button>
+            </div>
+            <div class="project-search-bar" id="search-bar-${project.id}" style="display: none;">
+                <input type="text" class="project-search-input" id="search-input-${project.id}" placeholder="Buscar en archivos...">
+                <button class="project-search-btn" onclick="searchInProject('${project.id}')">Buscar</button>
+                <button class="project-search-clear" onclick="clearProjectSearch('${project.id}')">×</button>
             </div>
             <div class="file-tree" id="tree-${project.id}" style="display: none;"></div>
         </div>
     `).join('');
+    
+    // Añadir listeners para Enter en los campos de búsqueda
+    state.projects.forEach(project => {
+        const input = document.getElementById(`search-input-${project.id}`);
+        if (input) {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    searchInProject(project.id);
+                }
+            });
+        }
+    });
 }
 
 function renderTree(items, container, projectId, level = 0) {
@@ -516,6 +534,129 @@ function toggleProject(projectId) {
         tree.style.display = 'none';
         toggle.classList.remove('open');
     }
+}
+
+// Mostrar/ocultar barra de búsqueda del proyecto
+function toggleProjectSearch(projectId, event) {
+    event.stopPropagation();
+    const searchBar = document.getElementById(`search-bar-${projectId}`);
+    const tree = document.getElementById(`tree-${projectId}`);
+    const toggle = document.getElementById(`toggle-${projectId}`);
+    
+    if (searchBar.style.display === 'none') {
+        searchBar.style.display = 'flex';
+        // Asegurar que el proyecto esté expandido
+        if (tree.style.display === 'none') {
+            tree.style.display = 'block';
+            toggle.classList.add('open');
+            if (!tree.hasChildNodes() || tree.querySelector('.loading')) {
+                loadProjectTree(projectId);
+            }
+        }
+        // Enfocar el input
+        document.getElementById(`search-input-${projectId}`).focus();
+    } else {
+        searchBar.style.display = 'none';
+        clearProjectSearch(projectId);
+    }
+}
+
+// Buscar texto en el proyecto
+async function searchInProject(projectId) {
+    const input = document.getElementById(`search-input-${projectId}`);
+    const searchTerm = input.value.trim();
+    
+    if (!searchTerm) {
+        showToast('Introduce un texto para buscar', 'error');
+        return;
+    }
+    
+    const tree = document.getElementById(`tree-${projectId}`);
+    
+    try {
+        const response = await fetch(`/api/projects/${projectId}/search?q=${encodeURIComponent(searchTerm)}`);
+        const result = await response.json();
+        
+        if (!response.ok) {
+            showToast(result.error || 'Error en la búsqueda', 'error');
+            return;
+        }
+        
+        if (result.count === 0) {
+            showToast(`No se encontró "${searchTerm}" en ningún archivo`, 'info');
+            return;
+        }
+        
+        // Aplicar filtro visual al árbol
+        applySearchFilter(tree, result.matchingFiles, projectId);
+        
+        showToast(`${result.count} archivo(s) encontrado(s)`, 'success');
+    } catch (error) {
+        console.error('Error searching:', error);
+        showToast('Error al buscar', 'error');
+    }
+}
+
+// Aplicar filtro de búsqueda al árbol
+function applySearchFilter(treeContainer, matchingFiles, projectId) {
+    // Marcar el contenedor con clase de búsqueda activa
+    treeContainer.classList.add('search-active');
+    
+    // Primero, quitar todas las marcas anteriores
+    treeContainer.querySelectorAll('.search-match, .search-match-parent').forEach(el => {
+        el.classList.remove('search-match', 'search-match-parent');
+    });
+    
+    // Expandir todas las carpetas y marcar archivos coincidentes
+    matchingFiles.forEach(filePath => {
+        const normalizedPath = filePath.replace(/\\/g, '/');
+        const parts = normalizedPath.split('/');
+        
+        // Marcar el archivo
+        const fileItem = treeContainer.querySelector(`[data-path="${filePath}"], [data-path="${normalizedPath}"]`);
+        if (fileItem) {
+            fileItem.classList.add('search-match');
+            
+            // Expandir y marcar todas las carpetas padre
+            let currentPath = '';
+            for (let i = 0; i < parts.length - 1; i++) {
+                currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
+                const folderId = `${projectId}-${currentPath.replace(/[\\/]/g, '-')}`;
+                
+                // Expandir la carpeta
+                const folderChildren = document.getElementById(`folder-children-${folderId}`);
+                const folderToggle = document.getElementById(`folder-toggle-${folderId}`);
+                
+                if (folderChildren) {
+                    folderChildren.style.display = 'block';
+                    folderChildren.classList.add('search-match-parent');
+                    if (folderToggle) folderToggle.classList.add('open');
+                }
+                
+                // Marcar el item de carpeta como padre
+                const folderItem = folderToggle?.closest('.tree-item');
+                if (folderItem) {
+                    folderItem.classList.add('search-match-parent');
+                }
+            }
+        }
+    });
+}
+
+// Limpiar búsqueda del proyecto
+function clearProjectSearch(projectId) {
+    const tree = document.getElementById(`tree-${projectId}`);
+    const input = document.getElementById(`search-input-${projectId}`);
+    
+    if (input) input.value = '';
+    
+    // Quitar clase de búsqueda activa
+    tree.classList.remove('search-active');
+    
+    // Quitar todas las marcas de búsqueda
+    tree.querySelectorAll('.search-match, .search-match-parent').forEach(el => {
+        el.classList.remove('search-match', 'search-match-parent');
+    });
 }
 
 function toggleFolder(folderId) {
