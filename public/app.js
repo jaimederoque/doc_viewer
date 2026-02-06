@@ -1393,7 +1393,7 @@ function setupMermaidZoom(controls, diagram) {
             const action = btn.dataset.action;
             
             if (action === 'in') {
-                currentZoom = Math.min(currentZoom + 0.25, 3);
+                currentZoom = Math.min(currentZoom + 0.25, 5);
             } else if (action === 'out') {
                 currentZoom = Math.max(currentZoom - 0.25, 0.25);
             } else if (action === 'reset') {

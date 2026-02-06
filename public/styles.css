@@ -673,7 +673,7 @@ body {
 
 .mermaid-diagram-container {
     overflow: auto;
-    max-height: 600px;
+    max-height: 70vh;
     padding: 20px;
     cursor: grab;
     user-select: none;
@@ -684,17 +684,18 @@ body {
 }
 
 .mermaid-diagram {
-    display: inline-flex;
-    justify-content: flex-start;
+    display: block;
     transform-origin: left top;
     transition: transform 0.2s ease;
     pointer-events: none;
-    min-width: fit-content;
 }
 
 .mermaid-diagram svg {
-    max-width: none;
-    height: auto;
+    display: block;
+    width: auto !important;
+    height: auto !important;
+    max-width: none !important;
+    min-width: auto;
 }
 
 .mermaid-error {
