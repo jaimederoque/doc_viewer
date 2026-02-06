@@ -26,14 +26,11 @@ const elements = {
     codeFileName: document.getElementById('codeFileName'),
     docsFileName: document.getElementById('docsFileName'),
     swaggerFileName: document.getElementById('swaggerFileName'),
-    currentFilePath: document.getElementById('currentFilePath'),
     modalOverlay: document.getElementById('modalOverlay'),
     projectName: document.getElementById('projectName'),
     projectPath: document.getElementById('projectPath'),
     toastContainer: document.getElementById('toastContainer'),
     noDocs: document.getElementById('noDocs'),
-    goToDocBtn: document.getElementById('goToDocBtn'),
-    goToCodeBtn: document.getElementById('goToCodeBtn'),
     viewerContent: document.querySelector('.viewer-content'),
     // Tabs
     normalTabs: document.getElementById('normalTabs'),
@@ -120,21 +117,6 @@ function setupEventListeners() {
     
     // Botón de comparar Swagger
     elements.compareSwaggerBtn.addEventListener('click', compareSwaggers);
-    
-    // Botones de navegación
-    elements.goToDocBtn.addEventListener('click', () => {
-        if (state.currentDoc) {
-            switchTab('docs');
-        } else {
-            showToast('No hay documentación disponible', 'error');
-        }
-    });
-    
-    elements.goToCodeBtn.addEventListener('click', () => {
-        if (state.currentFile) {
-            switchTab('code');
-        }
-    });
 }
 
 // ===== API Functions =====
@@ -310,7 +292,6 @@ async function loadFile(projectId, filePath, fileType) {
         elements.codeContent.className = langClass;
         elements.codeContent.textContent = data.content;
         elements.codeFileName.textContent = data.fileName;
-        elements.currentFilePath.textContent = filePath;
         
         // Aplicar highlight - Eliminar atributo para forzar re-highlight
         elements.codeContent.removeAttribute('data-highlighted');
@@ -322,8 +303,6 @@ async function loadFile(projectId, filePath, fileType) {
         // Cargar documentación si es un archivo de código (Java, JS, TS)
         if (['java', 'javascript', 'typescript'].includes(fileType)) {
             await loadDocumentation(projectId, filePath);
-            elements.goToDocBtn.style.display = 'inline-flex';
-            elements.goToCodeBtn.style.display = 'none';
         } else if (fileType === 'markdown') {
             // Si es un MD, mostrarlo en el panel de docs
             elements.docsContent.innerHTML = marked.parse(data.content);
@@ -340,20 +319,14 @@ async function loadFile(projectId, filePath, fileType) {
             // Renderizar diagramas Mermaid
             await renderMermaidDiagrams(elements.docsContent);
             
-            elements.goToDocBtn.style.display = 'none';
-            elements.goToCodeBtn.style.display = 'none';
             switchTab('docs');
         } else if (fileType === 'drawio') {
             // Si es un DrawIO, mostrarlo en el panel de docs con visor embebido
             await loadDrawio(data.content, data.fileName);
-            elements.goToDocBtn.style.display = 'none';
-            elements.goToCodeBtn.style.display = 'none';
             switchTab('docs');
         } else if (fileType === 'swagger') {
             // Mostrar Swagger UI
             await loadSwagger(projectId, filePath, data);
-            elements.goToDocBtn.style.display = 'none';
-            elements.goToCodeBtn.style.display = 'none';
         }
         
         showFileViewer();
@@ -577,17 +550,13 @@ function switchTab(tab) {
     elements.docsPanel.style.display = 'none';
     elements.swaggerPanel.style.display = 'none';
     elements.swaggerComparePanel.style.display = 'none';
-    elements.goToDocBtn.style.display = 'none';
-    elements.goToCodeBtn.style.display = 'none';
     
     switch (tab) {
         case 'code':
             elements.codePanel.style.display = 'flex';
-            elements.goToDocBtn.style.display = state.currentDoc ? 'inline-flex' : 'none';
             break;
         case 'docs':
             elements.docsPanel.style.display = 'flex';
-            elements.goToCodeBtn.style.display = ['java', 'javascript', 'typescript'].includes(state.currentFile?.fileType) ? 'inline-flex' : 'none';
             break;
         case 'split':
             viewerContent.classList.add('split');
@@ -834,7 +803,6 @@ function setSwaggerMode(isSwagger) {
 // Función para cargar y renderizar Swagger
 async function loadSwagger(projectId, filePath, data) {
     elements.swaggerFileName.textContent = data.fileName;
-    elements.currentFilePath.textContent = filePath;
     
     // Cambiar a modo Swagger
     setSwaggerMode(true);

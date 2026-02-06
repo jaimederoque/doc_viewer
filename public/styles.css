@@ -473,26 +473,6 @@ body {
     font-size: 14px;
 }
 
-.viewer-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 16px;
-    background-color: var(--bg-tertiary);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.file-path {
-    font-size: 12px;
-    color: var(--text-secondary);
-    font-family: 'Consolas', monospace;
-}
-
-.viewer-actions {
-    display: flex;
-    gap: 8px;
-}
-
 .viewer-content {
     flex: 1;
     display: flex;
