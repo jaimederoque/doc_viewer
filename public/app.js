@@ -1084,7 +1084,7 @@ async function loadSwagger(projectId, filePath, data) {
         swaggerUIInstance = SwaggerUIBundle({
             spec: spec,
             dom_id: '#swaggerContent',
-            deepLinking: true,
+            deepLinking: false,
             presets: [
                 SwaggerUIBundle.presets.apis,
                 SwaggerUIBundle.SwaggerUIStandalonePreset
@@ -1099,11 +1099,28 @@ async function loadSwagger(projectId, filePath, data) {
             syntaxHighlight: {
                 activate: true,
                 theme: 'monokai'
+            },
+            onComplete: () => {
+                // Scroll al inicio después de cargar
+                elements.swaggerContent.scrollTop = 0;
+                document.querySelector('.swagger-ui')?.scrollIntoView({ behavior: 'instant', block: 'start' });
             }
         });
         
         // Mostrar panel swagger
         switchTab('swagger');
+        
+        // Asegurar scroll al inicio con múltiples intentos
+        const resetScroll = () => {
+            elements.swaggerContent.scrollTop = 0;
+            const swaggerWrapper = elements.swaggerContent.querySelector('.swagger-ui');
+            if (swaggerWrapper) {
+                swaggerWrapper.scrollTop = 0;
+            }
+        };
+        setTimeout(resetScroll, 50);
+        setTimeout(resetScroll, 150);
+        setTimeout(resetScroll, 300);
         
     } catch (error) {
         console.error('Error parsing swagger:', error);

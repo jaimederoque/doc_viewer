@@ -1419,13 +1419,36 @@ body {
 }
 
 .swagger-panel .swagger-ui .scheme-container {
-    background: var(--bg-secondary);
+    background: transparent;
     box-shadow: none;
     padding: 15px 0;
+    border-bottom: none;
 }
 
 .swagger-panel .swagger-ui .scheme-container .schemes > label {
     color: var(--text-primary);
+}
+
+/* Servers dropdown */
+.swagger-panel .swagger-ui .servers {
+    background: transparent;
+}
+
+.swagger-panel .swagger-ui .servers > label {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.swagger-panel .swagger-ui .servers > label select {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+
+.swagger-panel .swagger-ui .servers-title {
+    color: var(--text-secondary);
 }
 
 .swagger-panel .swagger-ui .opblock-tag {
@@ -1573,13 +1596,16 @@ body {
 }
 
 .swagger-panel .swagger-ui .filter-container {
-    background: var(--bg-secondary);
+    background: transparent;
+    padding: 10px 0;
 }
 
 .swagger-panel .swagger-ui .filter-container .filter input {
-    background: var(--bg-tertiary);
+    background: var(--bg-secondary);
     color: var(--text-primary);
-    border-color: var(--border-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px 12px;
 }
 
 .swagger-panel .swagger-ui .markdown p,
