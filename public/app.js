@@ -1,3 +1,20 @@
+// ===== Iconos SVG =====
+const SVG_ICONS = {
+    folder: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>',
+    folderOpen: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><path d="M2 10h20"></path></svg>',
+    docs: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>',
+    swagger: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>',
+    java: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+    javascript: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>',
+    typescript: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M12 8v8"></path><path d="M17 8h-5"></path></svg>',
+    markdown: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>',
+    drawio: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8" cy="8" r="2"></circle><path d="M21 15l-5-5L5 21"></path></svg>',
+    project: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3zM3 9h18M9 21V9"></path></svg>',
+    search: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
+    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
+    chevron: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>'
+};
+
 // ===== Estado de la aplicación =====
 const state = {
     projects: [],
@@ -472,11 +489,11 @@ function renderProjects() {
     elements.projectsList.innerHTML = state.projects.map(project => `
         <div class="project-item" data-project-id="${project.id}">
             <div class="project-header" onclick="toggleProject('${project.id}')">
-                <span class="project-toggle" id="toggle-${project.id}">▶</span>
-                <span class="project-icon">📁</span>
+                <span class="project-toggle" id="toggle-${project.id}">${SVG_ICONS.chevron}</span>
+                <span class="project-icon">${SVG_ICONS.project}</span>
                 <span class="project-name" title="${project.path}">${project.name}</span>
-                <button class="project-action-btn project-search" onclick="toggleProjectSearch('${project.id}', event)" title="Buscar">🔍</button>
-                <button class="project-action-btn project-delete" onclick="deleteProject('${project.id}', event)" title="Eliminar">🗑</button>
+                <button class="project-action-btn project-search" onclick="toggleProjectSearch('${project.id}', event)" title="Buscar">${SVG_ICONS.search}</button>
+                <button class="project-action-btn project-delete" onclick="deleteProject('${project.id}', event)" title="Eliminar">${SVG_ICONS.trash}</button>
             </div>
             <div class="project-search-bar" id="search-bar-${project.id}" style="display: none;">
                 <input type="text" class="project-search-input" id="search-input-${project.id}" placeholder="Buscar en archivos...">
@@ -507,13 +524,13 @@ function renderTree(items, container, projectId, level = 0) {
         if (item.type === 'folder') {
             div.className = 'tree-item folder';
             
-            let folderIcon = '📂';
+            let folderIcon = SVG_ICONS.folder;
             let iconClass = 'folder';
             if (item.isDocsFolder) {
-                folderIcon = '📄';
+                folderIcon = SVG_ICONS.docs;
                 iconClass = 'docs-folder';
             } else if (item.isSwaggerFolder) {
-                folderIcon = '🔗';
+                folderIcon = SVG_ICONS.swagger;
                 iconClass = 'swagger-folder';
             }
             
@@ -521,7 +538,7 @@ function renderTree(items, container, projectId, level = 0) {
             const folderId = `${projectId}-${item.path.replace(/[\/\\]/g, '-')}`;
             
             div.innerHTML = `
-                <span class="tree-toggle" id="folder-toggle-${folderId}">▶</span>
+                <span class="tree-toggle" id="folder-toggle-${folderId}">${SVG_ICONS.chevron}</span>
                 <span class="tree-icon ${iconClass}">${folderIcon}</span>
                 <span class="tree-name">${item.name}</span>
                 <div class="tree-actions">
@@ -561,30 +578,30 @@ function renderTree(items, container, projectId, level = 0) {
             div.className = 'tree-item file';
             div.dataset.path = item.path;
             
-            let icon = '📝';
+            let icon = SVG_ICONS.markdown;
             let iconClass = 'markdown';
             
             if (item.fileType === 'java') {
-                icon = '☕';
+                icon = SVG_ICONS.java;
                 iconClass = 'java';
             } else if (item.fileType === 'javascript') {
-                icon = '🟡';
+                icon = SVG_ICONS.javascript;
                 iconClass = 'javascript';
             } else if (item.fileType === 'typescript') {
-                icon = '🔷';
+                icon = SVG_ICONS.typescript;
                 iconClass = 'typescript';
             } else if (item.fileType === 'swagger') {
-                icon = '📡';
+                icon = SVG_ICONS.swagger;
                 iconClass = 'swagger';
             } else if (item.fileType === 'drawio') {
-                icon = '🖼️';
+                icon = SVG_ICONS.drawio;
                 iconClass = 'drawio';
             }
             
             const hasDoc = item.docPath ? '<span class="tree-badge">DOC</span>' : '';
             
             div.innerHTML = `
-                <span class="tree-toggle" style="visibility: hidden;">▶</span>
+                <span class="tree-toggle" style="visibility: hidden;">${SVG_ICONS.chevron}</span>
                 <span class="tree-icon ${iconClass}">${icon}</span>
                 <span class="tree-name">${item.name}</span>
                 ${hasDoc}

@@ -273,6 +273,41 @@ body {
     border-color: var(--accent-danger);
 }
 
+/* ===== Add Project Button (similar a tabs) ===== */
+.btn-add-project {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    line-height: 1;
+    transition: all 0.2s ease;
+}
+
+.btn-add-project:hover {
+    color: var(--text-primary);
+}
+
+.btn-add-project:hover .add-icon {
+    color: var(--accent-success);
+    filter: drop-shadow(0 0 6px var(--accent-success));
+}
+
+.btn-add-project .add-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+}
+
 /* ===== Main Container ===== */
 .main-container {
     display: flex;
@@ -326,7 +361,7 @@ body {
 .project-header {
     display: flex;
     align-items: center;
-    padding: 6px 14px;
+    padding: 8px 14px;
     cursor: pointer;
     transition: all 0.15s ease;
     margin: 2px 6px;
@@ -337,9 +372,22 @@ body {
     background-color: var(--bg-hover);
 }
 
+.project-header:hover .project-icon {
+    color: var(--accent-primary);
+    filter: drop-shadow(0 0 4px var(--accent-primary));
+}
+
 .project-header.active {
     background: var(--bg-active);
-    border-left: 2px solid var(--accent-primary);
+}
+
+.project-header.active .project-icon {
+    color: var(--accent-primary);
+    filter: drop-shadow(0 0 6px var(--accent-primary));
+}
+
+.project-header.active .project-name {
+    color: var(--accent-primary);
 }
 
 .project-toggle {
@@ -348,7 +396,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
     color: var(--text-muted);
     transition: transform 0.15s ease;
     margin-right: 6px;
@@ -359,9 +406,12 @@ body {
 }
 
 .project-icon {
-    margin-right: 8px;
-    font-size: 14px;
-    opacity: 0.8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
 }
 
 .project-name {
@@ -371,17 +421,20 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    transition: color 0.15s ease;
 }
 
 .project-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     opacity: 0;
     background: none;
     border: none;
-    color: var(--text-muted, #555);
+    color: var(--text-muted);
     cursor: pointer;
     padding: 4px;
-    font-size: 14px;
-    transition: opacity 0.15s, color 0.15s;
+    transition: all 0.15s ease;
 }
 
 .project-header:hover .project-action-btn {
@@ -394,10 +447,13 @@ body {
 
 .project-action-btn.project-search:hover {
     color: var(--accent-primary);
+    filter: drop-shadow(0 0 4px var(--accent-primary));
 }
 
 .project-action-btn.project-delete:hover {
     color: var(--accent-danger);
+    filter: drop-shadow(0 0 4px var(--accent-danger));
+}
 }
 
 /* Search Bar */
@@ -542,10 +598,10 @@ body {
 .tree-item {
     display: flex;
     align-items: center;
-    padding: 4px 10px 4px 0;
+    padding: 5px 10px 5px 0;
     cursor: pointer;
     font-size: 13px;
-    transition: background-color 0.12s ease;
+    transition: all 0.12s ease;
     border-radius: 5px;
     margin: 1px 6px 1px 0;
 }
@@ -554,8 +610,20 @@ body {
     background-color: var(--bg-hover);
 }
 
+.tree-item:hover .tree-icon {
+    filter: drop-shadow(0 0 4px currentColor);
+}
+
 .tree-item.active {
     background-color: var(--bg-active);
+}
+
+.tree-item.active .tree-name {
+    color: var(--accent-primary);
+}
+
+.tree-item.active .tree-icon {
+    filter: drop-shadow(0 0 6px currentColor);
 }
 
 .tree-item.folder {
@@ -568,7 +636,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 9px;
     color: var(--text-muted);
     transition: transform 0.15s ease;
 }
@@ -578,9 +645,11 @@ body {
 }
 
 .tree-icon {
-    margin-right: 7px;
-    font-size: 14px;
-    opacity: 0.85;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+    transition: all 0.15s ease;
 }
 
 .tree-icon.java {
@@ -611,11 +680,17 @@ body {
     color: var(--md-color);
 }
 
+.tree-icon.swagger,
+.tree-icon.swagger-folder {
+    color: #85ea2d;
+}
+
 .tree-name {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    transition: color 0.15s ease;
 }
 
 .tree-badge {
