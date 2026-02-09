@@ -552,6 +552,18 @@ function renderTree(items, container, projectId, level = 0) {
                 e.stopPropagation();
                 // Si el click fue en un botón de acción, no expandir
                 if (e.target.classList.contains('tree-action-btn')) return;
+                
+                // Si es carpeta swagger, abrir directamente el primer archivo YAML
+                if (item.isSwaggerFolder && item.children && item.children.length > 0) {
+                    const swaggerFile = item.children.find(child => 
+                        child.type === 'file' && child.fileType === 'swagger'
+                    );
+                    if (swaggerFile) {
+                        loadFile(projectId, swaggerFile.path, 'swagger');
+                        return;
+                    }
+                }
+                
                 toggleFolder(folderId);
             };
             
