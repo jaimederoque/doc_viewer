@@ -867,7 +867,6 @@ body {
     overflow: auto;
     background-color: #1e1e1e;
     display: flex;
-    flex-direction: column;
 }
 
 .code-content pre {
@@ -876,6 +875,7 @@ body {
     display: flex;
     flex: 1;
     min-height: 100%;
+    overflow: visible !important;
 }
 
 .code-content code {
@@ -884,6 +884,11 @@ body {
     line-height: 1.6;
     padding: 16px;
     flex: 1;
+    overflow: visible !important;
+}
+
+.code-content code.hljs {
+    overflow: visible !important;
 }
 
 /* Números de línea */
@@ -900,6 +905,7 @@ body {
     line-height: 1.6;
     color: var(--text-muted);
     min-width: 50px;
+    flex-shrink: 0;
 }
 
 .line-numbers span {
