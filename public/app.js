@@ -1588,17 +1588,29 @@ async function loadDrawio(xmlContent, fileName) {
     if (!viewerHtml) {
         viewerHtml = `
             <div class="drawio-placeholder">
-                <div class="drawio-placeholder-icon">📐</div>
+                <div class="drawio-placeholder-icon">
+                    <svg width="48" height="48" viewBox="0 0 32 32" fill="none">
+                        <rect x="2" y="2" width="28" height="28" rx="4" fill="#F08705"/>
+                        <path d="M8 12h6v8H8zM18 12h6v8h-6z" fill="white"/>
+                        <path d="M14 15h4v2h-4z" fill="white"/>
+                    </svg>
+                </div>
                 <h3>Diagrama DrawIO</h3>
                 <p>No se pudo cargar el visor del diagrama</p>
             </div>
         `;
     }
     
+    const drawioLogoSvg = `<svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+        <rect x="2" y="2" width="28" height="28" rx="4" fill="#F08705"/>
+        <path d="M8 12h6v8H8zM18 12h6v8h-6z" fill="white"/>
+        <path d="M14 15h4v2h-4z" fill="white"/>
+    </svg>`;
+    
     elements.docsContent.innerHTML = `
         <div class="drawio-container">
             <div class="drawio-header">
-                <span class="drawio-icon">🖼️</span>
+                <span class="drawio-icon">${drawioLogoSvg}</span>
                 <span class="drawio-title">${fileName}</span>
             </div>
             <div class="drawio-preview">

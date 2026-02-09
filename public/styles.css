@@ -866,12 +866,16 @@ body {
     flex: 1;
     overflow: auto;
     background-color: #1e1e1e;
+    display: flex;
+    flex-direction: column;
 }
 
 .code-content pre {
     margin: 0;
     padding: 0;
     display: flex;
+    flex: 1;
+    min-height: 100%;
 }
 
 .code-content code {
