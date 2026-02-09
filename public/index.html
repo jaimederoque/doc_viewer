@@ -40,11 +40,27 @@
             </div>
             <div class="header-right">
                 <button id="themeToggle" class="theme-toggle" title="Cambiar tema">
-                    <span class="icon-sun">☀️</span>
-                    <span class="icon-moon">🌙</span>
+                    <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
                 </button>
                 <button id="addProjectBtn" class="btn btn-primary">
-                    <span class="icon">+</span> Añadir Proyecto
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Añadir Proyecto
                 </button>
             </div>
         </header>
@@ -65,7 +81,15 @@
                 <!-- Welcome screen -->
                 <div class="welcome-screen" id="welcomeScreen">
                     <div class="welcome-content">
-                        <div class="welcome-icon">📚</div>
+                        <div class="welcome-icon">
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                                <line x1="8" y1="7" x2="16" y2="7"></line>
+                                <line x1="8" y1="11" x2="16" y2="11"></line>
+                                <line x1="8" y1="15" x2="12" y2="15"></line>
+                            </svg>
+                        </div>
                         <h2>Bienvenido al Visor de Documentación de ODH</h2>
                         <p>Seleccione un proyecto para explorar su documentación.</p>
                     </div>
@@ -76,23 +100,51 @@
                     <!-- Tabs normales (código/docs) -->
                     <div class="viewer-tabs" id="normalTabs">
                         <button class="tab-btn active" data-tab="code" id="codeTab">
-                            <span class="tab-icon">&lt;/&gt;</span> Código
+                            <svg class="tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="16 18 22 12 16 6"></polyline>
+                                <polyline points="8 6 2 12 8 18"></polyline>
+                            </svg>
+                            Código
                         </button>
                         <button class="tab-btn" data-tab="docs" id="docsTab">
-                            <span class="tab-icon">📄</span> Documentación
+                            <svg class="tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                            Documentación
                         </button>
                         <button class="tab-btn" data-tab="split" id="splitTab">
-                            <span class="tab-icon">◫</span> Vista Dividida
+                            <svg class="tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="12" y1="3" x2="12" y2="21"></line>
+                            </svg>
+                            Dividida
                         </button>
                     </div>
 
                     <!-- Tabs de Swagger -->
                     <div class="viewer-tabs swagger-tabs" id="swaggerTabs" style="display: none;">
                         <button class="tab-btn active" data-tab="swagger" id="swaggerViewTab">
-                            <span class="tab-icon">📡</span> Ver Swagger
+                            <svg class="tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 6v6l4 2"></path>
+                            </svg>
+                            Swagger
                         </button>
                         <button class="tab-btn" data-tab="swagger-compare" id="swaggerCompareTab">
-                            <span class="tab-icon">⚖️</span> Comparar Swagger
+                            <svg class="tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 3h5v5"></path>
+                                <path d="M8 3H3v5"></path>
+                                <path d="M21 3l-7 7"></path>
+                                <path d="M3 3l7 7"></path>
+                                <path d="M21 21l-7-7"></path>
+                                <path d="M3 21l7-7"></path>
+                                <path d="M16 21h5v-5"></path>
+                                <path d="M8 21H3v-5"></path>
+                            </svg>
+                            Comparar
                         </button>
                     </div>
 
@@ -173,7 +225,13 @@
                 <!-- No Documentation Found -->
                 <div class="no-docs" id="noDocs" style="display: none;">
                     <div class="no-docs-content">
-                        <div class="no-docs-icon">📭</div>
+                        <div class="no-docs-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="9" y1="15" x2="15" y2="15"></line>
+                            </svg>
+                        </div>
                         <h3>Sin documentación</h3>
                         <p>No se encontró documentación para este archivo.</p>
                     </div>
