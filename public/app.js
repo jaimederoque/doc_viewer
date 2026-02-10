@@ -12,12 +12,16 @@ const SVG_ICONS = {
     project: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3zM3 9h18M9 21V9"></path></svg>',
     search: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
     trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
-    chevron: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>'
+    chevron: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>',
+    sidebarFolder: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>',
+    edit: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
+    drag: '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="2"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="9" cy="18" r="2"/><circle cx="15" cy="18" r="2"/></svg>'
 };
 
 // ===== Estado de la aplicación =====
 const state = {
-    projects: [],
+    projectsData: { items: [] }, // Estructura jerárquica de proyectos y carpetas
+    projects: [], // Lista plana de proyectos (para compatibilidad)
     currentProject: null,
     currentFile: null,
     currentDoc: null,
@@ -25,7 +29,10 @@ const state = {
     swaggerFiles: [], // Lista de todos los archivos swagger disponibles
     isSwaggerMode: false,
     pendingPasswordAction: null, // Acción pendiente tras validar contraseña
-    uploadTarget: null // Información de la carpeta destino para subir archivos
+    pendingInputAction: null, // Acción pendiente tras confirmar input
+    uploadTarget: null, // Información de la carpeta destino para subir archivos
+    draggedItem: null, // Elemento actual en drag & drop
+    expandedSidebarFolders: new Set() // Carpetas expandidas en el sidebar
 };
 
 // ===== Elementos del DOM =====
@@ -72,13 +79,23 @@ const elements = {
     // Upload modal
     uploadModalOverlay: document.getElementById('uploadModalOverlay'),
     uploadTargetPath: document.getElementById('uploadTargetPath'),
-    fileInput: document.getElementById('fileInput')
+    fileInput: document.getElementById('fileInput'),
+    // Input modal
+    inputModalOverlay: document.getElementById('inputModalOverlay'),
+    inputModalTitle: document.getElementById('inputModalTitle'),
+    inputModalLabel: document.getElementById('inputModalLabel'),
+    inputModalInput: document.getElementById('inputModalInput'),
+    // Sidebar resizer
+    sidebar: document.getElementById('sidebar'),
+    sidebarResizer: document.getElementById('sidebarResizer')
 };
 
 // ===== Inicialización =====
 document.addEventListener('DOMContentLoaded', () => {
     loadProjects();
     setupEventListeners();
+    setupSidebarResizer();
+    restoreSidebarWidth();
 });
 
 function setupEventListeners() {
@@ -86,6 +103,13 @@ function setupEventListeners() {
     document.getElementById('addProjectBtn').addEventListener('click', () => {
         requestPassword('Añadir proyecto', () => {
             showModal();
+        });
+    });
+    
+    // Botón para añadir carpeta organizativa (con protección de contraseña)
+    document.getElementById('addFolderBtn').addEventListener('click', () => {
+        requestPassword('Crear carpeta', () => {
+            createSidebarFolder();
         });
     });
     
@@ -107,12 +131,21 @@ function setupEventListeners() {
     document.getElementById('cancelUploadBtn').addEventListener('click', hideUploadModal);
     document.getElementById('confirmUploadBtn').addEventListener('click', uploadFile);
     
+    // Modal de input genérico
+    document.getElementById('closeInputModal').addEventListener('click', hideInputModal);
+    document.getElementById('cancelInputBtn').addEventListener('click', hideInputModal);
+    document.getElementById('confirmInputBtn').addEventListener('click', confirmInput);
+    elements.inputModalInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') confirmInput();
+    });
+    
     // Cerrar modales con Escape
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             hideModal();
             hidePasswordModal();
             hideUploadModal();
+            hideInputModal();
         }
     });
     
@@ -125,6 +158,9 @@ function setupEventListeners() {
     });
     elements.uploadModalOverlay.addEventListener('click', (e) => {
         if (e.target === elements.uploadModalOverlay) hideUploadModal();
+    });
+    elements.inputModalOverlay.addEventListener('click', (e) => {
+        if (e.target === elements.inputModalOverlay) hideInputModal();
     });
     
     // Tabs
@@ -223,11 +259,90 @@ function updateMermaidTheme(theme) {
     });
 }
 
+// ===== Sidebar Resizer =====
+function setupSidebarResizer() {
+    const resizer = elements.sidebarResizer;
+    const sidebar = elements.sidebar;
+    
+    if (!resizer || !sidebar) return;
+    
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+    
+    resizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = sidebar.offsetWidth;
+        
+        document.body.classList.add('sidebar-resizing');
+        resizer.classList.add('resizing');
+        
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        
+        const diff = e.clientX - startX;
+        const newWidth = Math.min(Math.max(startWidth + diff, 200), 600);
+        
+        sidebar.style.width = newWidth + 'px';
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            document.body.classList.remove('sidebar-resizing');
+            resizer.classList.remove('resizing');
+            
+            // Guardar ancho en localStorage
+            localStorage.setItem('sidebarWidth', sidebar.offsetWidth);
+        }
+    });
+}
+
+function restoreSidebarWidth() {
+    const savedWidth = localStorage.getItem('sidebarWidth');
+    if (savedWidth && elements.sidebar) {
+        const width = parseInt(savedWidth, 10);
+        if (width >= 200 && width <= 600) {
+            elements.sidebar.style.width = width + 'px';
+        }
+    }
+}
+
 // ===== API Functions =====
+
+// Obtener lista plana de todos los proyectos (recursivo)
+function getAllProjectsFlat(items = state.projectsData.items) {
+    let result = [];
+    for (const item of items) {
+        if (item.type === 'project') {
+            result.push(item);
+        } else if (item.type === 'folder' && item.items) {
+            result = result.concat(getAllProjectsFlat(item.items));
+        }
+    }
+    return result;
+}
+
 async function loadProjects() {
     try {
         const response = await fetch('/api/projects');
-        state.projects = await response.json();
+        const data = await response.json();
+        
+        // Manejar tanto formato nuevo como antiguo
+        if (Array.isArray(data)) {
+            // Formato antiguo (array plano)
+            state.projectsData = { items: data.map(p => ({ type: 'project', ...p })) };
+        } else {
+            state.projectsData = data;
+        }
+        
+        // Mantener lista plana para compatibilidad
+        state.projects = getAllProjectsFlat();
+        
         renderProjects();
         
         if (state.projects.length === 0) {
@@ -262,7 +377,8 @@ async function saveProject() {
         }
         
         const project = await response.json();
-        state.projects.push(project);
+        state.projectsData.items.push(project);
+        state.projects = getAllProjectsFlat();
         renderProjects();
         hideModal();
         showToast('Proyecto añadido correctamente', 'success');
@@ -283,8 +399,8 @@ async function deleteProject(id, event) {
         
         try {
             await fetch(`/api/projects/${id}`, { method: 'DELETE' });
-            state.projects = state.projects.filter(p => p.id !== id);
-            renderProjects();
+            // Recargar proyectos desde el servidor
+            await loadProjects();
             showToast('Proyecto eliminado', 'success');
             
             if (state.projects.length === 0) {
@@ -481,29 +597,22 @@ async function loadDocumentation(projectId, sourcePath) {
 }
 
 // ===== Render Functions =====
+let rootDropZoneInitialized = false;
+
 function renderProjects() {
-    if (state.projects.length === 0) {
+    if (state.projectsData.items.length === 0) {
         elements.projectsList.innerHTML = '<div class="empty-tree">No hay proyectos</div>';
         return;
     }
     
-    elements.projectsList.innerHTML = state.projects.map(project => `
-        <div class="project-item" data-project-id="${project.id}">
-            <div class="project-header" onclick="toggleProject('${project.id}')">
-                <span class="project-toggle" id="toggle-${project.id}">${SVG_ICONS.chevron}</span>
-                <span class="project-icon">${SVG_ICONS.project}</span>
-                <span class="project-name" title="${project.path}">${project.name}</span>
-                <button class="project-action-btn project-search" onclick="toggleProjectSearch('${project.id}', event)" title="Buscar">${SVG_ICONS.search}</button>
-                <button class="project-action-btn project-delete" onclick="deleteProject('${project.id}', event)" title="Eliminar">${SVG_ICONS.trash}</button>
-            </div>
-            <div class="project-search-bar" id="search-bar-${project.id}" style="display: none;">
-                <input type="text" class="project-search-input" id="search-input-${project.id}" placeholder="Buscar en archivos...">
-                <button class="project-search-btn" onclick="searchInProject('${project.id}')">Buscar</button>
-                <button class="project-search-clear" onclick="clearProjectSearch('${project.id}')">×</button>
-            </div>
-            <div class="file-tree" id="tree-${project.id}" style="display: none;"></div>
-        </div>
-    `).join('');
+    elements.projectsList.innerHTML = '';
+    renderSidebarItems(state.projectsData.items, elements.projectsList);
+    
+    // Configurar drop zone para nivel raíz (solo una vez)
+    if (!rootDropZoneInitialized) {
+        setupRootDropZone();
+        rootDropZoneInitialized = true;
+    }
     
     // Añadir listeners para Enter en los campos de búsqueda
     state.projects.forEach(project => {
@@ -516,6 +625,434 @@ function renderProjects() {
             });
         }
     });
+}
+
+// Renderizar items del sidebar recursivamente (carpetas y proyectos)
+function renderSidebarItems(items, container) {
+    items.forEach((item, index) => {
+        if (item.type === 'folder') {
+            renderSidebarFolder(item, container, index);
+        } else if (item.type === 'project') {
+            renderSidebarProject(item, container, index);
+        }
+    });
+}
+
+// Renderizar una carpeta organizativa del sidebar
+function renderSidebarFolder(folder, container, index) {
+    const isExpanded = state.expandedSidebarFolders.has(folder.id);
+    
+    const folderDiv = document.createElement('div');
+    folderDiv.className = 'sidebar-folder';
+    folderDiv.dataset.folderId = folder.id;
+    folderDiv.dataset.type = 'folder';
+    folderDiv.draggable = true;
+    
+    folderDiv.innerHTML = `
+        <div class="sidebar-folder-header" data-folder-id="${folder.id}">
+            <span class="drag-handle" title="Arrastrar">${SVG_ICONS.drag}</span>
+            <span class="folder-toggle ${isExpanded ? 'open' : ''}">${SVG_ICONS.chevron}</span>
+            <span class="folder-icon">${SVG_ICONS.sidebarFolder}</span>
+            <span class="folder-name">${folder.name}</span>
+            <button class="project-action-btn project-add-folder" title="Añadir subcarpeta">${SVG_ICONS.sidebarFolder}</button>
+            <button class="project-action-btn project-search" title="Renombrar">${SVG_ICONS.edit}</button>
+            <button class="project-action-btn project-delete" title="Eliminar carpeta">${SVG_ICONS.trash}</button>
+        </div>
+        <div class="sidebar-folder-content ${isExpanded ? '' : 'collapsed'}" id="folder-content-${folder.id}"></div>
+    `;
+    
+    container.appendChild(folderDiv);
+    
+    // Event listeners para la cabecera
+    const header = folderDiv.querySelector('.sidebar-folder-header');
+    const toggle = header.querySelector('.folder-toggle');
+    const content = folderDiv.querySelector('.sidebar-folder-content');
+    
+    // Click en toggle para expandir/colapsar
+    header.addEventListener('click', (e) => {
+        if (e.target.closest('.project-action-btn') || e.target.closest('.drag-handle')) return;
+        
+        const isOpen = toggle.classList.toggle('open');
+        content.classList.toggle('collapsed', !isOpen);
+        
+        if (isOpen) {
+            state.expandedSidebarFolders.add(folder.id);
+        } else {
+            state.expandedSidebarFolders.delete(folder.id);
+        }
+    });
+    
+    // Botón añadir subcarpeta
+    header.querySelector('.project-add-folder').addEventListener('click', (e) => {
+        e.stopPropagation();
+        requestPassword('Crear subcarpeta', () => {
+            createSidebarFolder(folder.id);
+        });
+    });
+    
+    // Botón renombrar
+    header.querySelector('.project-search').addEventListener('click', (e) => {
+        e.stopPropagation();
+        requestPassword('Renombrar carpeta', () => {
+            renameSidebarFolder(folder.id, folder.name);
+        });
+    });
+    
+    // Botón eliminar
+    header.querySelector('.project-delete').addEventListener('click', (e) => {
+        e.stopPropagation();
+        requestPassword('Eliminar carpeta', () => {
+            deleteSidebarFolder(folder.id);
+        });
+    });
+    
+    // Renderizar contenido de la carpeta
+    if (folder.items && folder.items.length > 0) {
+        renderSidebarItems(folder.items, content);
+    }
+    
+    // Drag & Drop para la carpeta
+    setupDragAndDrop(folderDiv, folder);
+}
+
+// Renderizar un proyecto en el sidebar
+function renderSidebarProject(project, container, index) {
+    const projectDiv = document.createElement('div');
+    projectDiv.className = 'project-item';
+    projectDiv.dataset.projectId = project.id;
+    projectDiv.dataset.type = 'project';
+    projectDiv.draggable = true;
+    
+    projectDiv.innerHTML = `
+        <div class="project-header" data-project-id="${project.id}">
+            <span class="drag-handle" title="Arrastrar">${SVG_ICONS.drag}</span>
+            <span class="project-toggle" id="toggle-${project.id}">${SVG_ICONS.chevron}</span>
+            <span class="project-icon">${SVG_ICONS.project}</span>
+            <span class="project-name" title="${project.path}">${project.name}</span>
+            <button class="project-action-btn project-search" title="Buscar">${SVG_ICONS.search}</button>
+            <button class="project-action-btn project-delete" title="Eliminar">${SVG_ICONS.trash}</button>
+        </div>
+        <div class="project-search-bar" id="search-bar-${project.id}" style="display: none;">
+            <input type="text" class="project-search-input" id="search-input-${project.id}" placeholder="Buscar en archivos...">
+            <button class="project-search-btn">Buscar</button>
+            <button class="project-search-clear">×</button>
+        </div>
+        <div class="file-tree" id="tree-${project.id}" style="display: none;"></div>
+    `;
+    
+    container.appendChild(projectDiv);
+    
+    // Event listeners
+    const header = projectDiv.querySelector('.project-header');
+    
+    header.addEventListener('click', (e) => {
+        if (e.target.closest('.project-action-btn') || e.target.closest('.drag-handle')) return;
+        toggleProject(project.id);
+    });
+    
+    header.querySelector('.project-search').addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleProjectSearch(project.id, e);
+    });
+    
+    header.querySelector('.project-delete').addEventListener('click', (e) => {
+        deleteProject(project.id, e);
+    });
+    
+    // Search bar buttons
+    const searchBar = projectDiv.querySelector('.project-search-bar');
+    searchBar.querySelector('.project-search-btn').addEventListener('click', () => {
+        searchInProject(project.id);
+    });
+    searchBar.querySelector('.project-search-clear').addEventListener('click', () => {
+        clearProjectSearch(project.id);
+    });
+    
+    // Drag & Drop para el proyecto
+    setupDragAndDrop(projectDiv, project);
+}
+
+// Configurar Drag & Drop para un elemento
+function setupDragAndDrop(element, item) {
+    // El dragstart puede iniciar desde cualquier parte del elemento
+    element.addEventListener('dragstart', (e) => {
+        // Evitar que el evento se propague a elementos padres
+        e.stopPropagation();
+        
+        // Solo permitir drag si es desde el elemento principal o el drag handle
+        state.draggedItem = item;
+        element.classList.add('sidebar-item-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', item.id);
+        
+        // Crear una imagen de arrastre personalizada
+        const dragImage = element.cloneNode(true);
+        dragImage.style.opacity = '0.8';
+        dragImage.style.position = 'absolute';
+        dragImage.style.top = '-1000px';
+        document.body.appendChild(dragImage);
+        e.dataTransfer.setDragImage(dragImage, 0, 0);
+        setTimeout(() => document.body.removeChild(dragImage), 0);
+    });
+    
+    element.addEventListener('dragend', (e) => {
+        e.stopPropagation();
+        element.classList.remove('sidebar-item-dragging');
+        state.draggedItem = null;
+        document.querySelectorAll('.sidebar-drag-over, .drag-over-folder').forEach(el => {
+            el.classList.remove('sidebar-drag-over', 'drag-over-folder');
+        });
+    });
+    
+    // Si es una carpeta, permitir drop dentro
+    if (item.type === 'folder') {
+        const header = element.querySelector('.sidebar-folder-header');
+        const content = element.querySelector('.sidebar-folder-content');
+        
+        header.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (state.draggedItem && state.draggedItem.id !== item.id) {
+                header.classList.add('drag-over-folder');
+                e.dataTransfer.dropEffect = 'move';
+            }
+        });
+        
+        header.addEventListener('dragleave', (e) => {
+            header.classList.remove('drag-over-folder');
+        });
+        
+        header.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            header.classList.remove('drag-over-folder');
+            
+            if (state.draggedItem && state.draggedItem.id !== item.id) {
+                // No permitir mover una carpeta dentro de sí misma o sus descendientes
+                if (!isDescendant(state.draggedItem, item.id)) {
+                    // Capturar IDs antes de pedir contraseña (dragend limpia state.draggedItem)
+                    const draggedItemId = state.draggedItem.id;
+                    const targetFolderId = item.id;
+                    requestPassword('Reorganizar', () => {
+                        moveItemToFolder(draggedItemId, targetFolderId);
+                    });
+                } else {
+                    showToast('No puedes mover una carpeta dentro de sí misma', 'error');
+                }
+            }
+        });
+        
+        // Prevenir que el contenido de la carpeta capture eventos de drop de forma incorrecta
+        if (content) {
+            content.addEventListener('dragover', (e) => {
+                // Permitir que el evento pase a elementos hijos
+                if (state.draggedItem) {
+                    e.dataTransfer.dropEffect = 'move';
+                }
+            });
+        }
+    }
+    
+    // Drop para reordenar (antes/después del elemento)
+    element.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (state.draggedItem && state.draggedItem.id !== item.id) {
+            e.dataTransfer.dropEffect = 'move';
+        }
+    });
+}
+
+// Configurar drop zone para nivel raíz (projectsList)
+function setupRootDropZone() {
+    elements.projectsList.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (state.draggedItem) {
+            // Mostrar indicador de drop en la zona raíz
+            if (!e.target.closest('.project-item') && !e.target.closest('.sidebar-folder')) {
+                elements.projectsList.classList.add('sidebar-drag-over');
+            }
+            e.dataTransfer.dropEffect = 'move';
+        }
+    });
+    
+    elements.projectsList.addEventListener('dragleave', (e) => {
+        // Solo quitar la clase si salimos del projectsList completamente
+        if (!elements.projectsList.contains(e.relatedTarget)) {
+            elements.projectsList.classList.remove('sidebar-drag-over');
+        }
+    });
+    
+    elements.projectsList.addEventListener('drop', (e) => {
+        e.preventDefault();
+        elements.projectsList.classList.remove('sidebar-drag-over');
+        
+        // Solo mover a raíz si no se soltó sobre otro elemento
+        if (state.draggedItem && !e.target.closest('.sidebar-folder-header')) {
+            // Verificar que no está ya en la raíz
+            const isInRoot = state.projectsData.items.some(i => i.id === state.draggedItem.id);
+            if (!isInRoot) {
+                // Capturar ID antes de pedir contraseña (dragend limpia state.draggedItem)
+                const draggedItemId = state.draggedItem.id;
+                requestPassword('Mover a raíz', () => {
+                    moveItemToFolder(draggedItemId, 'root');
+                });
+            }
+        }
+    });
+}
+
+// Verificar si un item es descendiente de una carpeta
+function isDescendant(folder, targetId, items = state.projectsData.items) {
+    if (folder.type !== 'folder') return false;
+    
+    const checkItems = (folderItems) => {
+        for (const item of folderItems) {
+            if (item.id === targetId) return true;
+            if (item.type === 'folder' && item.items) {
+                if (checkItems(item.items)) return true;
+            }
+        }
+        return false;
+    };
+    
+    return folder.items ? checkItems(folder.items) : false;
+}
+
+// Mover un item a una carpeta
+async function moveItemToFolder(itemId, targetFolderId) {
+    // Encontrar y remover el item de su ubicación actual
+    let movedItem = null;
+    
+    const removeItem = (items) => {
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].id === itemId) {
+                movedItem = items.splice(i, 1)[0];
+                return true;
+            }
+            if (items[i].type === 'folder' && items[i].items) {
+                if (removeItem(items[i].items)) return true;
+            }
+        }
+        return false;
+    };
+    
+    removeItem(state.projectsData.items);
+    
+    if (!movedItem) return;
+    
+    // Añadir a la carpeta destino
+    const addToFolder = (items) => {
+        for (const item of items) {
+            if (item.id === targetFolderId && item.type === 'folder') {
+                item.items.push(movedItem);
+                return true;
+            }
+            if (item.type === 'folder' && item.items) {
+                if (addToFolder(item.items)) return true;
+            }
+        }
+        return false;
+    };
+    
+    if (targetFolderId === 'root') {
+        state.projectsData.items.push(movedItem);
+    } else {
+        addToFolder(state.projectsData.items);
+    }
+    
+    // Guardar en servidor
+    await saveProjectsStructure();
+    renderProjects();
+    showToast('Elemento movido', 'success');
+}
+
+// Guardar estructura de proyectos en el servidor
+async function saveProjectsStructure() {
+    try {
+        await fetch('/api/projects', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: state.projectsData.items })
+        });
+    } catch (error) {
+        console.error('Error saving projects structure:', error);
+        showToast('Error al guardar cambios', 'error');
+    }
+}
+
+// Crear carpeta organizativa
+function createSidebarFolder(parentId = null) {
+    showInputModal('Crear carpeta', 'Nombre de la carpeta:', '', async (name) => {
+        try {
+            const response = await fetch('/api/projects/folder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, parentId })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                showToast(error.error, 'error');
+                return;
+            }
+            
+            await loadProjects();
+            showToast('Carpeta creada', 'success');
+        } catch (error) {
+            console.error('Error creating folder:', error);
+            showToast('Error al crear carpeta', 'error');
+        }
+    });
+}
+
+// Renombrar carpeta organizativa
+function renameSidebarFolder(folderId, currentName) {
+    showInputModal('Renombrar carpeta', 'Nuevo nombre:', currentName, async (name) => {
+        if (name === currentName) return;
+        
+        try {
+            const response = await fetch(`/api/projects/folder/${folderId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                showToast(error.error, 'error');
+                return;
+            }
+            
+            await loadProjects();
+            showToast('Carpeta renombrada', 'success');
+        } catch (error) {
+            console.error('Error renaming folder:', error);
+            showToast('Error al renombrar carpeta', 'error');
+        }
+    });
+}
+
+// Eliminar carpeta organizativa
+async function deleteSidebarFolder(folderId) {
+    if (!confirm('¿Eliminar esta carpeta? Los proyectos dentro se moverán al nivel superior.')) return;
+    
+    try {
+        const response = await fetch(`/api/projects/folder/${folderId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            showToast(error.error, 'error');
+            return;
+        }
+        
+        await loadProjects();
+        showToast('Carpeta eliminada', 'success');
+    } catch (error) {
+        console.error('Error deleting folder:', error);
+        showToast('Error al eliminar carpeta', 'error');
+    }
 }
 
 function renderTree(items, container, projectId, level = 0) {
@@ -861,6 +1398,38 @@ function validatePassword() {
         showToast('Contraseña incorrecta', 'error');
         elements.passwordInput.value = '';
         elements.passwordInput.focus();
+    }
+}
+
+// ===== Modal de input genérico =====
+function showInputModal(title, label, defaultValue = '', onConfirm) {
+    state.pendingInputAction = onConfirm;
+    elements.inputModalTitle.textContent = title;
+    elements.inputModalLabel.textContent = label;
+    elements.inputModalInput.value = defaultValue;
+    elements.inputModalInput.placeholder = '';
+    elements.inputModalOverlay.classList.add('show');
+    elements.inputModalInput.focus();
+    elements.inputModalInput.select();
+}
+
+function hideInputModal() {
+    elements.inputModalOverlay.classList.remove('show');
+    state.pendingInputAction = null;
+}
+
+function confirmInput() {
+    const value = elements.inputModalInput.value.trim();
+    if (!value) {
+        showToast('El campo no puede estar vacío', 'error');
+        elements.inputModalInput.focus();
+        return;
+    }
+    
+    const action = state.pendingInputAction;
+    hideInputModal();
+    if (action) {
+        action(value);
     }
 }
 

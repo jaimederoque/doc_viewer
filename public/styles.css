@@ -318,18 +318,44 @@ body {
 /* ===== Sidebar ===== */
 .sidebar {
     width: var(--sidebar-width);
-    min-width: var(--sidebar-width);
+    min-width: 200px;
+    max-width: 600px;
     background: var(--bg-secondary);
-    border-right: 1px solid var(--border-color);
+    border-right: none;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     transition: background 0.2s ease;
 }
 
+/* Sidebar Resizer */
+.sidebar-resizer {
+    width: 4px;
+    background: var(--border-color);
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+}
+
+.sidebar-resizer:hover,
+.sidebar-resizer.resizing {
+    background: var(--accent-primary);
+}
+
+.sidebar-resizing {
+    cursor: col-resize !important;
+    user-select: none !important;
+}
+
+.sidebar-resizing * {
+    cursor: col-resize !important;
+    user-select: none !important;
+}
+
 .sidebar-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: 0 18px;
     border-bottom: 1px solid var(--border-color);
     background: var(--bg-secondary);
@@ -345,6 +371,35 @@ body {
     letter-spacing: 0.05em;
     margin: 0;
     line-height: 1;
+    flex: 1;
+}
+
+/* Drag Handle */
+.drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 16px;
+    color: var(--text-muted);
+    opacity: 0;
+    cursor: grab;
+    margin-right: 4px;
+    transition: opacity 0.15s;
+}
+
+.project-header:hover .drag-handle,
+.sidebar-folder-header:hover .drag-handle {
+    opacity: 0.5;
+}
+
+.drag-handle:hover {
+    opacity: 1 !important;
+    color: var(--accent-primary);
+}
+
+.drag-handle:active {
+    cursor: grabbing;
 }
 
 .projects-list {
@@ -454,6 +509,179 @@ body {
     color: var(--accent-danger);
     filter: drop-shadow(0 0 4px var(--accent-danger));
 }
+
+.project-action-btn.project-add-folder:hover {
+    color: var(--accent-success);
+    filter: drop-shadow(0 0 4px var(--accent-success));
+}
+
+/* ===== Sidebar Folders (Groups) ===== */
+.sidebar-folder {
+    margin: 2px 6px;
+}
+
+.sidebar-folder-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-radius: 6px;
+    background-color: var(--bg-tertiary);
+    border: 1px solid transparent;
+}
+
+.sidebar-folder-header:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--border-color);
+}
+
+.sidebar-folder-header .folder-toggle {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: transform 0.15s ease;
+    margin-right: 6px;
+}
+
+.sidebar-folder-header .folder-toggle.open {
+    transform: rotate(90deg);
+}
+
+.sidebar-folder-header .folder-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    color: var(--accent-warning);
+}
+
+.sidebar-folder-header .folder-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.sidebar-folder-header .folder-name-input {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border: 1px solid var(--accent-primary);
+    border-radius: 4px;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    outline: none;
+}
+
+.sidebar-folder-content {
+    margin-left: 12px;
+    padding-left: 10px;
+    border-left: 1px dashed var(--border-color);
+}
+
+/* Proyectos dentro de carpetas del sidebar */
+.sidebar-folder-content > .project-item {
+    margin: 2px 0;
+}
+
+.sidebar-folder-content > .project-item > .project-header {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 10px;
+}
+
+/* Ajustar indentación del file-tree dentro de carpetas del sidebar */
+.sidebar-folder-content .project-item .file-tree {
+    margin-left: 32px;
+    padding-left: 16px;
+    border-left: 1px solid var(--border-color);
+}
+
+/* Carpetas anidadas dentro de carpetas */
+.sidebar-folder-content > .sidebar-folder {
+    margin: 2px 0;
+}
+
+.sidebar-folder-content > .sidebar-folder > .sidebar-folder-header {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.sidebar-folder-content.collapsed {
+    display: none;
+}
+
+/* Drag & Drop Styles */
+.sidebar-item-dragging {
+    opacity: 0.4;
+    transform: scale(0.98);
+}
+
+.sidebar-item-dragging * {
+    pointer-events: none;
+}
+
+.sidebar-drag-over {
+    background-color: rgba(47, 129, 247, 0.15) !important;
+    border: 2px dashed var(--accent-primary) !important;
+    border-radius: 6px;
+}
+
+.projects-list.sidebar-drag-over {
+    min-height: 50px;
+}
+
+.sidebar-drop-indicator {
+    height: 2px;
+    background-color: var(--accent-primary);
+    margin: 2px 6px;
+    border-radius: 2px;
+    animation: pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+    from { opacity: 0.5; }
+    to { opacity: 1; }
+}
+
+.sidebar-folder-header.drag-over-folder {
+    border: 2px dashed var(--accent-primary) !important;
+    background-color: rgba(47, 129, 247, 0.2) !important;
+    box-shadow: 0 0 8px rgba(47, 129, 247, 0.3);
+}
+
+/* Sidebar Action Buttons */
+.sidebar-header-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.sidebar-add-folder-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.sidebar-add-folder-btn:hover {
+    color: var(--accent-success);
+    border-color: var(--accent-success);
+    background-color: rgba(46, 160, 67, 0.1);
 }
 
 /* Search Bar */
@@ -591,7 +819,7 @@ body {
 .file-tree {
     padding-left: 18px;
     border-left: 1px solid var(--border-color);
-    margin-left: 10px;
+    margin-left: 36px;
     padding-bottom: 2px;
 }
 
@@ -1727,6 +1955,44 @@ body {
 .compare-selector select:focus {
     outline: none;
     border-color: var(--accent-primary);
+}
+
+/* Botón Comparar - look and feel similar a tabs */
+.btn-compare {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-compare:hover {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    background: var(--bg-active);
+}
+
+.btn-compare:hover .compare-icon {
+    color: var(--accent-primary);
+    filter: drop-shadow(0 0 6px var(--accent-primary));
+}
+
+.btn-compare:active {
+    transform: scale(0.98);
+}
+
+.btn-compare .compare-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
 }
 
 .compare-content {

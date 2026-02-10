@@ -21,8 +21,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Almacén de proyectos registrados
-let projects = [];
+// Almacén de proyectos registrados (estructura jerárquica)
+let projectsData = { items: [] };
 const projectsFilePath = path.join(DATA_PATH, 'projects.json');
 
 // Cargar proyectos guardados al iniciar
@@ -30,21 +30,69 @@ function loadProjects() {
     try {
         if (fs.existsSync(projectsFilePath)) {
             const data = fs.readFileSync(projectsFilePath, 'utf-8');
-            projects = JSON.parse(data);
+            const parsed = JSON.parse(data);
+            
+            // Migrar estructura antigua (array) a nueva (objeto con items)
+            if (Array.isArray(parsed)) {
+                projectsData = { items: parsed.map(p => ({ type: 'project', ...p })) };
+                saveProjects(); // Guardar en nuevo formato
+                console.log('📦 Migrado projects.json al nuevo formato jerárquico');
+            } else {
+                projectsData = parsed;
+            }
         }
     } catch (error) {
         console.error('Error loading projects:', error);
-        projects = [];
+        projectsData = { items: [] };
     }
 }
 
 // Guardar proyectos
 function saveProjects() {
     try {
-        fs.writeFileSync(projectsFilePath, JSON.stringify(projects, null, 2));
+        fs.writeFileSync(projectsFilePath, JSON.stringify(projectsData, null, 2));
     } catch (error) {
         console.error('Error saving projects:', error);
     }
+}
+
+// Obtener lista plana de todos los proyectos (recursivo)
+function getAllProjects(items = projectsData.items) {
+    let result = [];
+    for (const item of items) {
+        if (item.type === 'project') {
+            result.push(item);
+        } else if (item.type === 'folder' && item.items) {
+            result = result.concat(getAllProjects(item.items));
+        }
+    }
+    return result;
+}
+
+// Buscar proyecto por ID en la estructura jerárquica
+function findProjectById(id, items = projectsData.items) {
+    for (const item of items) {
+        if (item.type === 'project' && item.id === id) {
+            return item;
+        } else if (item.type === 'folder' && item.items) {
+            const found = findProjectById(id, item.items);
+            if (found) return found;
+        }
+    }
+    return null;
+}
+
+// Eliminar item por ID de la estructura jerárquica
+function removeItemById(id, items = projectsData.items) {
+    for (let i = 0; i < items.length; i++) {
+        if (items[i].id === id) {
+            items.splice(i, 1);
+            return true;
+        } else if (items[i].type === 'folder' && items[i].items) {
+            if (removeItemById(id, items[i].items)) return true;
+        }
+    }
+    return false;
 }
 
 // Inicializar proyectos
@@ -52,9 +100,116 @@ loadProjects();
 
 // ===== API ENDPOINTS =====
 
-// Obtener todos los proyectos registrados
+// Obtener estructura jerárquica de proyectos
 app.get('/api/projects', (req, res) => {
-    res.json(projects);
+    res.json(projectsData);
+});
+
+// Guardar estructura completa (para reorganización drag & drop)
+app.put('/api/projects', (req, res) => {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items)) {
+        return res.status(400).json({ error: 'Estructura inválida' });
+    }
+    projectsData.items = items;
+    saveProjects();
+    res.json({ success: true });
+});
+
+// Crear carpeta organizativa
+app.post('/api/projects/folder', (req, res) => {
+    const { name, parentId } = req.body;
+    
+    if (!name) {
+        return res.status(400).json({ error: 'Nombre de carpeta requerido' });
+    }
+    
+    const folder = {
+        type: 'folder',
+        id: 'folder-' + Date.now().toString(),
+        name,
+        items: []
+    };
+    
+    if (parentId) {
+        // Añadir dentro de una carpeta existente
+        const addToFolder = (items) => {
+            for (const item of items) {
+                if (item.id === parentId && item.type === 'folder') {
+                    item.items.push(folder);
+                    return true;
+                } else if (item.type === 'folder' && item.items) {
+                    if (addToFolder(item.items)) return true;
+                }
+            }
+            return false;
+        };
+        
+        if (!addToFolder(projectsData.items)) {
+            return res.status(404).json({ error: 'Carpeta padre no encontrada' });
+        }
+    } else {
+        // Añadir al nivel raíz
+        projectsData.items.push(folder);
+    }
+    
+    saveProjects();
+    res.json(folder);
+});
+
+// Renombrar carpeta organizativa
+app.patch('/api/projects/folder/:id', (req, res) => {
+    const { id } = req.params;
+    const { name } = req.body;
+    
+    if (!name) {
+        return res.status(400).json({ error: 'Nombre requerido' });
+    }
+    
+    const renameFolder = (items) => {
+        for (const item of items) {
+            if (item.id === id && item.type === 'folder') {
+                item.name = name;
+                return true;
+            } else if (item.type === 'folder' && item.items) {
+                if (renameFolder(item.items)) return true;
+            }
+        }
+        return false;
+    };
+    
+    if (!renameFolder(projectsData.items)) {
+        return res.status(404).json({ error: 'Carpeta no encontrada' });
+    }
+    
+    saveProjects();
+    res.json({ success: true });
+});
+
+// Eliminar carpeta organizativa (mueve proyectos al nivel superior)
+app.delete('/api/projects/folder/:id', (req, res) => {
+    const { id } = req.params;
+    
+    const deleteFolder = (items, parent = null, parentIndex = -1) => {
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].id === id && items[i].type === 'folder') {
+                const folder = items[i];
+                // Mover contenido al nivel actual
+                items.splice(i, 1, ...(folder.items || []));
+                return true;
+            } else if (items[i].type === 'folder' && items[i].items) {
+                if (deleteFolder(items[i].items, items, i)) return true;
+            }
+        }
+        return false;
+    };
+    
+    if (!deleteFolder(projectsData.items)) {
+        return res.status(404).json({ error: 'Carpeta no encontrada' });
+    }
+    
+    saveProjects();
+    res.json({ success: true });
 });
 
 // Añadir un nuevo proyecto
@@ -71,18 +226,20 @@ app.post('/api/projects', (req, res) => {
     }
 
     // Verificar si ya existe
-    const exists = projects.some(p => p.path === projectPath);
+    const allProjects = getAllProjects();
+    const exists = allProjects.some(p => p.path === projectPath);
     if (exists) {
         return res.status(400).json({ error: 'Este proyecto ya está registrado' });
     }
 
     const project = {
+        type: 'project',
         id: Date.now().toString(),
         name,
         path: projectPath
     };
 
-    projects.push(project);
+    projectsData.items.push(project);
     saveProjects();
     res.json(project);
 });
@@ -90,7 +247,7 @@ app.post('/api/projects', (req, res) => {
 // Eliminar un proyecto
 app.delete('/api/projects/:id', (req, res) => {
     const { id } = req.params;
-    projects = projects.filter(p => p.id !== id);
+    removeItemById(id);
     saveProjects();
     res.json({ success: true });
 });
@@ -100,7 +257,7 @@ app.post('/api/projects/:id/upload', upload.array('files', 20), (req, res) => {
     const { id } = req.params;
     const { folderPath } = req.body;
     
-    const project = projects.find(p => p.id === id);
+    const project = findProjectById(id);
     
     if (!project) {
         return res.status(404).json({ error: 'Proyecto no encontrado' });
@@ -157,7 +314,7 @@ app.delete('/api/projects/:id/file', (req, res) => {
     const { id } = req.params;
     const { filePath } = req.body;
     
-    const project = projects.find(p => p.id === id);
+    const project = findProjectById(id);
     
     if (!project) {
         return res.status(404).json({ error: 'Proyecto no encontrado' });
@@ -204,7 +361,7 @@ app.delete('/api/projects/:id/file', (req, res) => {
 // Obtener estructura de archivos de un proyecto
 app.get('/api/projects/:id/tree', (req, res) => {
     const { id } = req.params;
-    const project = projects.find(p => p.id === id);
+    const project = findProjectById(id);
     
     if (!project) {
         return res.status(404).json({ error: 'Proyecto no encontrado' });
@@ -223,7 +380,7 @@ app.get('/api/projects/:id/search', (req, res) => {
     const { id } = req.params;
     const { q } = req.query;
     
-    const project = projects.find(p => p.id === id);
+    const project = findProjectById(id);
     
     if (!project) {
         return res.status(404).json({ error: 'Proyecto no encontrado' });
@@ -406,7 +563,7 @@ app.get('/api/projects/:id/file', (req, res) => {
     const { id } = req.params;
     const { path: filePath } = req.query;
     
-    const project = projects.find(p => p.id === id);
+    const project = findProjectById(id);
     
     if (!project) {
         return res.status(404).json({ error: 'Proyecto no encontrado' });
@@ -449,7 +606,7 @@ app.get('/api/projects/:id/raw', (req, res) => {
     const { id } = req.params;
     const { path: filePath } = req.query;
     
-    const project = projects.find(p => p.id === id);
+    const project = findProjectById(id);
     
     if (!project) {
         return res.status(404).send('Proyecto no encontrado');
@@ -496,7 +653,7 @@ app.get('/api/projects/:id/doc', (req, res) => {
     // Mantener compatibilidad con javaPath
     const filePath = sourcePath || req.query.javaPath;
     
-    const project = projects.find(p => p.id === id);
+    const project = findProjectById(id);
     
     if (!project) {
         return res.status(404).json({ error: 'Proyecto no encontrado' });
@@ -536,9 +693,10 @@ app.get('/', (req, res) => {
 
 // Iniciar servidor
 app.listen(PORT, () => {
+    const allProjects = getAllProjects();
     console.log(`\n🚀 Servidor de documentación iniciado en http://localhost:${PORT}`);
     console.log(`📁 Datos persistentes en: ${DATA_PATH}`);
-    console.log(`\n📂 Proyectos registrados: ${projects.length}`);
-    projects.forEach(p => console.log(`   - ${p.name}: ${p.path}`));
+    console.log(`\n📂 Proyectos registrados: ${allProjects.length}`);
+    allProjects.forEach(p => console.log(`   - ${p.name}: ${p.path}`));
     console.log('\n');
 });

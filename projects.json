@@ -1,17 +1,63 @@
-[
-  {
-    "id": "1770305987183",
-    "name": "ms_odh_policy",
-    "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\ms_odh_policy"
-  },
-  {
-    "id": "1770378693646",
-    "name": "triggers_odh",
-    "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\MS_ODH\\axaes-odh-db-functions\\functions\\pro"
-  },
-  {
-    "id": "1770628379941",
-    "name": "ms_odh_consents",
-    "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\ms_odh_consent"
-  }
-]
+{
+  "items": [
+    {
+      "type": "folder",
+      "id": "folder-1770715957313",
+      "name": "PÓLIZAS",
+      "items": [
+        {
+          "type": "folder",
+          "id": "folder-1770716245395",
+          "name": "ETL",
+          "items": []
+        },
+        {
+          "type": "folder",
+          "id": "folder-1770716719928",
+          "name": "MICRO",
+          "items": [
+            {
+              "type": "project",
+              "id": "1770305987183",
+              "name": "ms_odh_policy",
+              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\ms_odh_policy"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "id": "folder-1770716160680",
+      "name": "CONSENTIMIENTOS",
+      "items": [
+        {
+          "type": "folder",
+          "id": "folder-1770716783504",
+          "name": "SERVICIO",
+          "items": [
+            {
+              "type": "project",
+              "id": "1770628379941",
+              "name": "ms_odh_consents",
+              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\ms_odh_consent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "id": "folder-1770716172814",
+      "name": "TRIGGERS",
+      "items": [
+        {
+          "type": "project",
+          "id": "1770378693646",
+          "name": "triggers_odh",
+          "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\MS_ODH\\axaes-odh-db-functions\\functions\\pro"
+        }
+      ]
+    }
+  ]
+}
