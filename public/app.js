@@ -407,7 +407,7 @@ async function loadFile(projectId, filePath, fileType) {
         // Cargar documentación si es un archivo de código (Java, JS, TS)
         if (['java', 'javascript', 'typescript'].includes(fileType)) {
             await loadDocumentation(projectId, filePath);
-            switchTab('code');
+            switchTab('split');
         } else if (fileType === 'markdown') {
             // Si es un MD, mostrarlo en el panel de docs
             elements.docsContent.innerHTML = marked.parse(data.content);
