@@ -865,7 +865,7 @@ body {
 .code-content {
     flex: 1;
     overflow: auto;
-    background-color: #1e1e1e;
+    background-color: var(--bg-primary);
     display: flex;
 }
 
@@ -876,6 +876,7 @@ body {
     flex: 1;
     min-height: 100%;
     overflow: visible !important;
+    border-left: 1px solid var(--border-color);
 }
 
 .code-content code {
@@ -896,8 +897,7 @@ body {
     display: flex;
     flex-direction: column;
     padding: 16px 12px;
-    background-color: #1a1a1a;
-    border-right: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
     text-align: right;
     user-select: none;
     font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
@@ -906,6 +906,9 @@ body {
     color: var(--text-muted);
     min-width: 50px;
     flex-shrink: 0;
+    position: sticky;
+    left: 0;
+    z-index: 1;
 }
 
 .line-numbers span {
@@ -1758,7 +1761,7 @@ body {
 .yaml-content {
     flex: 1;
     overflow: auto;
-    background-color: #1e1e1e;
+    background-color: var(--bg-primary);
     font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
     font-size: 13px;
     line-height: 1.5;

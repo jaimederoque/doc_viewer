@@ -407,6 +407,7 @@ async function loadFile(projectId, filePath, fileType) {
         // Cargar documentación si es un archivo de código (Java, JS, TS)
         if (['java', 'javascript', 'typescript'].includes(fileType)) {
             await loadDocumentation(projectId, filePath);
+            switchTab('code');
         } else if (fileType === 'markdown') {
             // Si es un MD, mostrarlo en el panel de docs
             elements.docsContent.innerHTML = marked.parse(data.content);
@@ -552,17 +553,6 @@ function renderTree(items, container, projectId, level = 0) {
                 e.stopPropagation();
                 // Si el click fue en un botón de acción, no expandir
                 if (e.target.classList.contains('tree-action-btn')) return;
-                
-                // Si es carpeta swagger, abrir directamente el primer archivo YAML
-                if (item.isSwaggerFolder && item.children && item.children.length > 0) {
-                    const swaggerFile = item.children.find(child => 
-                        child.type === 'file' && child.fileType === 'swagger'
-                    );
-                    if (swaggerFile) {
-                        loadFile(projectId, swaggerFile.path, 'swagger');
-                        return;
-                    }
-                }
                 
                 toggleFolder(folderId);
             };
