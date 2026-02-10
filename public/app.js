@@ -487,6 +487,8 @@ async function loadFile(projectId, filePath, fileType) {
         const data = await response.json();
         
         state.currentFile = { projectId, path: filePath, ...data };
+        // Asegurar que currentProject apunte al proyecto del archivo cargado
+        state.currentProject = { id: projectId };
         state.currentDoc = null;
         
         // Ocultar panel swagger y compare por defecto
@@ -1168,6 +1170,10 @@ function toggleProject(projectId) {
     if (tree.style.display === 'none') {
         tree.style.display = 'block';
         toggle.classList.add('open');
+        // Marcar proyecto como actual cuando se abre
+        state.currentProject = { id: projectId };
+        // Mantener estado de expansión para este proyecto
+        state.expandedSidebarFolders.add(projectId);
         
         // Cargar árbol si está vacío
         if (!tree.hasChildNodes() || tree.querySelector('.loading')) {
@@ -1176,6 +1182,8 @@ function toggleProject(projectId) {
     } else {
         tree.style.display = 'none';
         toggle.classList.remove('open');
+        // Quitar estado de expansión para este proyecto
+        state.expandedSidebarFolders.delete(projectId);
     }
 }
 
@@ -1188,10 +1196,16 @@ function toggleProjectSearch(projectId, event) {
     
     if (searchBar.style.display === 'none') {
         searchBar.style.display = 'flex';
+        // Guardar estado de carpetas expandidas antes de la búsqueda
+        state._preSearchExpanded = new Set(state.expandedSidebarFolders);
         // Asegurar que el proyecto esté expandido
         if (tree.style.display === 'none') {
             tree.style.display = 'block';
             toggle.classList.add('open');
+            // Añadir a estado de expansión
+            state.expandedSidebarFolders.add(projectId);
+            // Marcar proyecto actual
+            state.currentProject = { id: projectId };
             if (!tree.hasChildNodes() || tree.querySelector('.loading')) {
                 loadProjectTree(projectId);
             }
@@ -1306,7 +1320,14 @@ function clearProjectSearch(projectId) {
     });
 
     // Colapsar todas las carpetas expandidas por la búsqueda, pero dejar abierto el proyecto actual
-    state.expandedSidebarFolders.clear();
+    // Restaurar el estado de expansiones anterior a la búsqueda si existe
+    if (state._preSearchExpanded) {
+        state.expandedSidebarFolders = new Set(state._preSearchExpanded);
+        delete state._preSearchExpanded;
+    } else {
+        state.expandedSidebarFolders.clear();
+    }
+    // Asegurar que el proyecto actual quede abierto
     if (state.currentProject && state.currentProject.id) {
         state.expandedSidebarFolders.add(state.currentProject.id);
     }
