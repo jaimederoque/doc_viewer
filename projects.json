@@ -34,7 +34,7 @@
         {
           "type": "folder",
           "id": "folder-1770716783504",
-          "name": "SERVICIO",
+          "name": "MICRO",
           "items": [
             {
               "type": "project",
@@ -58,6 +58,92 @@
           "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\MS_ODH\\axaes-odh-db-functions\\functions\\pro"
         }
       ]
+    },
+    {
+      "type": "folder",
+      "id": "folder-1770718036685",
+      "name": "RECIBOS",
+      "items": []
+    },
+    {
+      "type": "folder",
+      "id": "folder-1770718044673",
+      "name": "SINIESTROS",
+      "items": []
+    },
+    {
+      "type": "folder",
+      "id": "folder-1770718051677",
+      "name": "PROYECTOS",
+      "items": []
+    },
+    {
+      "type": "folder",
+      "id": "folder-1770718059536",
+      "name": "CATÁLOGOS",
+      "items": [
+        {
+          "type": "folder",
+          "id": "folder-1770718195633",
+          "name": "ETL",
+          "items": []
+        },
+        {
+          "type": "folder",
+          "id": "folder-1770718207126",
+          "name": "MICRO",
+          "items": []
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "id": "folder-1770718123013",
+      "name": "PERSONAS",
+      "items": []
+    },
+    {
+      "type": "folder",
+      "id": "folder-1770718127764",
+      "name": "CLIENTES",
+      "items": [
+        {
+          "type": "folder",
+          "id": "folder-1770718222964",
+          "name": "ETL",
+          "items": []
+        },
+        {
+          "type": "folder",
+          "id": "folder-1770718228117",
+          "name": "MICRO",
+          "items": []
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "id": "folder-1770718141437",
+      "name": "INFO COMPETENCIA",
+      "items": []
+    },
+    {
+      "type": "folder",
+      "id": "folder-1770718150366",
+      "name": "KPI'S",
+      "items": []
+    },
+    {
+      "type": "folder",
+      "id": "folder-1770718157715",
+      "name": "MEDIADORES",
+      "items": []
+    },
+    {
+      "type": "folder",
+      "id": "folder-1770718172492",
+      "name": "RECIBOS/ASEGURADO",
+      "items": []
     }
   ]
 }

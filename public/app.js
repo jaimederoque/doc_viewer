@@ -617,18 +617,6 @@ function renderProjects() {
         setupRootDropZone();
         rootDropZoneInitialized = true;
     }
-    
-    // Añadir listeners para Enter en los campos de búsqueda
-    state.projects.forEach(project => {
-        const input = document.getElementById(`search-input-${project.id}`);
-        if (input) {
-            input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    searchInProject(project.id);
-                }
-            });
-        }
-    });
 }
 
 // Renderizar items del sidebar recursivamente (carpetas y proyectos)
@@ -727,6 +715,7 @@ function renderSidebarProject(project, container, index) {
     projectDiv.dataset.type = 'project';
     projectDiv.draggable = true;
     
+    const isExpanded = state.expandedSidebarFolders.has(project.id);
     projectDiv.innerHTML = `
         <div class="project-header" data-project-id="${project.id}">
             <span class="drag-handle" title="Arrastrar">${SVG_ICONS.drag}</span>
@@ -738,10 +727,10 @@ function renderSidebarProject(project, container, index) {
         </div>
         <div class="project-search-bar" id="search-bar-${project.id}" style="display: none;">
             <input type="text" class="project-search-input" id="search-input-${project.id}" placeholder="Buscar en archivos...">
-            <button class="project-search-btn">Buscar</button>
-            <button class="project-search-clear">×</button>
+            <button class="project-search-btn" title="Buscar">${SVG_ICONS.search}</button>
+            <button class="project-search-clear" title="Limpiar">×</button>
         </div>
-        <div class="file-tree" id="tree-${project.id}" style="display: none;"></div>
+        <div class="file-tree" id="tree-${project.id}" style="display: ${isExpanded ? 'block' : 'none'};"></div>
     `;
     
     container.appendChild(projectDiv);
@@ -763,8 +752,15 @@ function renderSidebarProject(project, container, index) {
         deleteProject(project.id, e);
     });
     
-    // Search bar buttons
+    // Search bar buttons and input
     const searchBar = projectDiv.querySelector('.project-search-bar');
+    const searchInput = searchBar.querySelector('.project-search-input');
+    
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            searchInProject(project.id);
+        }
+    });
     searchBar.querySelector('.project-search-btn').addEventListener('click', () => {
         searchInProject(project.id);
     });
@@ -1295,19 +1291,39 @@ function clearProjectSearch(projectId) {
     const tree = document.getElementById(`tree-${projectId}`);
     const input = document.getElementById(`search-input-${projectId}`);
     const searchBar = document.getElementById(`search-bar-${projectId}`);
-    
+
     if (input) input.value = '';
-    
+
     // Ocultar barra de búsqueda
     if (searchBar) searchBar.style.display = 'none';
-    
+
     // Quitar clase de búsqueda activa
     tree.classList.remove('search-active');
-    
+
     // Quitar todas las marcas de búsqueda
     tree.querySelectorAll('.search-match, .search-match-parent').forEach(el => {
         el.classList.remove('search-match', 'search-match-parent');
     });
+
+    // Colapsar todas las carpetas expandidas por la búsqueda, pero dejar abierto el proyecto actual
+    state.expandedSidebarFolders.clear();
+    if (state.currentProject && state.currentProject.id) {
+        state.expandedSidebarFolders.add(state.currentProject.id);
+    }
+    renderProjects();
+    // Asegurar que el árbol del proyecto actual quede expandido visualmente
+    if (state.currentProject && state.currentProject.id) {
+        const tree = document.getElementById(`tree-${state.currentProject.id}`);
+        const toggle = document.getElementById(`toggle-${state.currentProject.id}`);
+        if (tree) {
+            tree.style.display = 'block';
+            // Si el árbol está vacío, cargarlo
+            if (!tree.hasChildNodes() || tree.querySelector('.loading')) {
+                loadProjectTree(state.currentProject.id);
+            }
+        }
+        if (toggle) toggle.classList.add('open');
+    }
 }
 
 function toggleFolder(folderId) {
