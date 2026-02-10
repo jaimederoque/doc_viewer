@@ -606,7 +606,11 @@ function renderProjects() {
     }
     
     elements.projectsList.innerHTML = '';
-    renderSidebarItems(state.projectsData.items, elements.projectsList);
+    // Ordenar items alfabéticamente por nombre
+    const sortedItems = [...state.projectsData.items].sort((a, b) => 
+        a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+    );
+    renderSidebarItems(sortedItems, elements.projectsList);
     
     // Configurar drop zone para nivel raíz (solo una vez)
     if (!rootDropZoneInitialized) {
