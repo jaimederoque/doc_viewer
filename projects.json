@@ -49,13 +49,20 @@
     {
       "type": "folder",
       "id": "folder-1770716172814",
-      "name": "TRIGGERS",
+      "name": "COMÚN",
       "items": [
         {
-          "type": "project",
-          "id": "1770378693646",
-          "name": "triggers_odh",
-          "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\MS_ODH\\axaes-odh-db-functions\\functions\\pro"
+          "type": "folder",
+          "id": "folder-1770724565405",
+          "name": "TRIGGERS",
+          "items": [
+            {
+              "type": "project",
+              "id": "1770378693646",
+              "name": "triggers_odh",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\MS_ODH\\axaes-odh-db-functions\\functions\\pro"
+            }
+          ]
         }
       ]
     },
@@ -63,19 +70,52 @@
       "type": "folder",
       "id": "folder-1770718036685",
       "name": "RECIBOS",
-      "items": []
+      "items": [
+        {
+          "type": "folder",
+          "id": "folder-1770724519761",
+          "name": "ETL",
+          "items": []
+        },
+        {
+          "type": "folder",
+          "id": "folder-1770724525362",
+          "name": "MICRO",
+          "items": []
+        }
+      ]
     },
     {
       "type": "folder",
       "id": "folder-1770718044673",
       "name": "SINIESTROS",
-      "items": []
+      "items": [
+        {
+          "type": "folder",
+          "id": "folder-1770724545573",
+          "name": "ETL",
+          "items": []
+        },
+        {
+          "type": "folder",
+          "id": "folder-1770724549039",
+          "name": "MICRO",
+          "items": []
+        }
+      ]
     },
     {
       "type": "folder",
       "id": "folder-1770718051677",
       "name": "PROYECTOS",
-      "items": []
+      "items": [
+        {
+          "type": "folder",
+          "id": "folder-1770724513856",
+          "name": "MICRO",
+          "items": []
+        }
+      ]
     },
     {
       "type": "folder",
@@ -100,19 +140,26 @@
       "type": "folder",
       "id": "folder-1770718123013",
       "name": "PERSONAS",
-      "items": []
+      "items": [
+        {
+          "type": "folder",
+          "id": "folder-1770724498777",
+          "name": "ETL",
+          "items": []
+        },
+        {
+          "type": "folder",
+          "id": "folder-1770724502639",
+          "name": "MICRO",
+          "items": []
+        }
+      ]
     },
     {
       "type": "folder",
       "id": "folder-1770718127764",
       "name": "CLIENTES",
       "items": [
-        {
-          "type": "folder",
-          "id": "folder-1770718222964",
-          "name": "ETL",
-          "items": []
-        },
         {
           "type": "folder",
           "id": "folder-1770718228117",
@@ -151,13 +198,40 @@
       "type": "folder",
       "id": "folder-1770718157715",
       "name": "MEDIADORES",
-      "items": []
+      "items": [
+        {
+          "type": "folder",
+          "id": "folder-1770724464125",
+          "name": "ETL",
+          "items": [
+            {
+              "type": "project",
+              "id": "1770736848796",
+              "name": "talend_mediadores",
+              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\talend_mediadores"
+            }
+          ]
+        },
+        {
+          "type": "folder",
+          "id": "folder-1770724493127",
+          "name": "MICRO",
+          "items": []
+        }
+      ]
     },
     {
       "type": "folder",
       "id": "folder-1770718172492",
       "name": "RECIBOS/ASEGURADO",
-      "items": []
+      "items": [
+        {
+          "type": "folder",
+          "id": "folder-1770724539238",
+          "name": "MICRO",
+          "items": []
+        }
+      ]
     }
   ]
 }
