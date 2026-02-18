@@ -11,7 +11,7 @@ const upload = multer({
 });
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 80;
 
 // Ruta de datos persistentes (configurable por variable de entorno para OpenShift)
 const DATA_PATH = process.env.DATA_PATH || __dirname;
