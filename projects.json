@@ -9,7 +9,14 @@
           "type": "folder",
           "id": "folder-1770716245395",
           "name": "ETL",
-          "items": []
+          "items": [
+            {
+              "type": "project",
+              "id": "1773760525069",
+              "name": "talend_vsi_par",
+              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\talend_vsi_par"
+            }
+          ]
         },
         {
           "type": "folder",
@@ -63,6 +70,19 @@
               "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\MS_ODH\\axaes-odh-db-functions\\functions\\pro"
             }
           ]
+        },
+        {
+          "type": "folder",
+          "id": "folder-1773760140387",
+          "name": "ETL",
+          "items": [
+            {
+              "type": "project",
+              "id": "1773760314357",
+              "name": "talend_eiac",
+              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\talend_eiac"
+            }
+          ]
         }
       ]
     },
@@ -75,7 +95,14 @@
           "type": "folder",
           "id": "folder-1770724519761",
           "name": "ETL",
-          "items": []
+          "items": [
+            {
+              "type": "project",
+              "id": "1771933381674",
+              "name": "talend_recibos",
+              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\talend_recibos"
+            }
+          ]
         },
         {
           "type": "folder",
@@ -94,7 +121,14 @@
           "type": "folder",
           "id": "folder-1770724545573",
           "name": "ETL",
-          "items": []
+          "items": [
+            {
+              "type": "project",
+              "id": "1773759962607",
+              "name": "talend_siniestros_spc",
+              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\talend_siniestros_spc"
+            }
+          ]
         },
         {
           "type": "folder",
@@ -145,7 +179,14 @@
           "type": "folder",
           "id": "folder-1770724498777",
           "name": "ETL",
-          "items": []
+          "items": [
+            {
+              "type": "project",
+              "id": "1771929963324",
+              "name": "talend_personas",
+              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\talend_personas"
+            }
+          ]
         },
         {
           "type": "folder",
