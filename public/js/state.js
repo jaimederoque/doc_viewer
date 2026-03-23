@@ -7,6 +7,10 @@ export const state = {
     viewMode: 'code',
     swaggerFiles: [],
     isSwaggerMode: false,
+    isAuthenticated: false,
+    isEditingDoc: false,
+    docEditDirty: false,
+    isDocSaving: false,
     pendingPasswordAction: null,
     pendingInputAction: null,
     uploadTarget: null,
@@ -24,6 +28,8 @@ export const elements = {
     swaggerComparePanel: document.getElementById('swaggerComparePanel'),
     codeContent: document.getElementById('codeContent'),
     docsContent: document.getElementById('docsContent'),
+    docsEditorContainer: document.getElementById('docsEditorContainer'),
+    docsEditor: document.getElementById('docsEditor'),
     swaggerContent: document.getElementById('swaggerContent'),
     codeFileName: document.getElementById('codeFileName'),
     docsFileName: document.getElementById('docsFileName'),
@@ -33,6 +39,7 @@ export const elements = {
     projectPath: document.getElementById('projectPath'),
     toastContainer: document.getElementById('toastContainer'),
     noDocs: document.getElementById('noDocs'),
+    authLockBtn: document.getElementById('authLockBtn'),
     viewerContent: document.querySelector('.viewer-content'),
     normalTabs: document.getElementById('normalTabs'),
     swaggerTabs: document.getElementById('swaggerTabs'),
@@ -58,5 +65,9 @@ export const elements = {
     inputModalLabel: document.getElementById('inputModalLabel'),
     inputModalInput: document.getElementById('inputModalInput'),
     sidebar: document.getElementById('sidebar'),
-    sidebarResizer: document.getElementById('sidebarResizer')
+    sidebarResizer: document.getElementById('sidebarResizer'),
+    editDocBtn: document.getElementById('editDocBtn'),
+    docEditToolbar: document.getElementById('docEditToolbar'),
+    docSaveBtn: document.getElementById('docSaveBtn'),
+    docCancelBtn: document.getElementById('docCancelBtn')
 };

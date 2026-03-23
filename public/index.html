@@ -40,6 +40,18 @@
                 <h1>Documentación Operational Data Hub (ODH)</h1>
             </div>
             <div class="header-right">
+                <button id="authLockBtn" class="auth-lock-btn" title="Desbloquear cambios" aria-pressed="false" aria-label="Estado de bloqueo">
+                    <svg class="lock-icon lock-closed" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="4" y="11" width="16" height="11" rx="2"></rect>
+                        <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+                        <circle cx="12" cy="16.5" r="1.5"></circle>
+                    </svg>
+                    <svg class="lock-icon lock-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="4" y="11" width="16" height="11" rx="2"></rect>
+                        <path d="M8 11V7a4 4 0 0 1 7.5-2"></path>
+                        <circle cx="12" cy="16.5" r="1.5"></circle>
+                    </svg>
+                </button>
                 <button id="themeToggle" class="theme-toggle" title="Cambiar tema">
                     <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="5"></circle>
@@ -217,6 +229,30 @@
                         <div class="docs-panel" id="docsPanel" style="display: none;">
                             <div class="panel-header">
                                 <span id="docsFileName"></span>
+                                <div class="panel-actions">
+                                    <div class="doc-edit-toolbar" id="docEditToolbar">
+                                        <button class="panel-action-btn doc-save-btn" id="docSaveBtn" title="Guardar cambios">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                        </button>
+                                        <button class="panel-action-btn doc-cancel-btn" id="docCancelBtn" title="Cancelar edición">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <button class="panel-action-btn edit-doc-btn" id="editDocBtn" title="Editar documentación" aria-pressed="false">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="docs-editor-container" id="docsEditorContainer">
+                                <textarea id="docsEditor" class="docs-editor" spellcheck="false"></textarea>
                             </div>
                             <div class="markdown-content" id="docsContent"></div>
                         </div>

@@ -4,6 +4,7 @@ const ROOT_DIR = path.resolve(__dirname, '..', '..');
 const DATA_PATH = process.env.DATA_PATH || ROOT_DIR;
 const PROJECTS_FILE = path.join(DATA_PATH, 'projects.json');
 const PORT = Number(process.env.PORT) || 80;
+const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'ODH123';
 
 const UPLOAD_LIMIT_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_UPLOAD_FILES = 20;
@@ -22,6 +23,7 @@ module.exports = {
     DATA_PATH,
     PROJECTS_FILE,
     PORT,
+    AUTH_PASSWORD,
     UPLOAD_LIMIT_BYTES,
     MAX_UPLOAD_FILES,
     TREE_FILE_EXTENSIONS,

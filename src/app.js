@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const projectsRouter = require('./routes/projectsRouter');
-const { ROOT_DIR, DATA_PATH } = require('./config/env');
+const { ROOT_DIR, DATA_PATH, AUTH_PASSWORD } = require('./config/env');
 const { initializeStore, getAllProjects } = require('./store/projectStore');
 
 function createApp() {
@@ -11,10 +11,24 @@ function createApp() {
     const app = express();
 
     app.use(cors());
-    app.use(express.json());
+    app.use(express.json({ limit: '5mb' }));
     app.use(express.static(path.join(ROOT_DIR, 'public')));
 
     app.use('/api/projects', projectsRouter);
+
+    app.post('/api/auth/verify', (req, res) => {
+        const { password } = req.body || {};
+        if (!password) {
+            res.status(400).json({ error: 'Contraseña requerida' });
+            return;
+        }
+
+        if (password === AUTH_PASSWORD) {
+            res.json({ success: true });
+        } else {
+            res.status(401).json({ error: 'Contraseña incorrecta' });
+        }
+    });
 
     app.get('/', (req, res) => {
         res.sendFile(path.join(ROOT_DIR, 'public', 'index.html'));

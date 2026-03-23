@@ -15,7 +15,8 @@ const {
     getDocumentation,
     getRawFile,
     deleteFileOrFolder,
-    uploadFiles
+    uploadFiles,
+    saveMarkdownFile
 } = require('../services/fileService');
 const { searchInProject } = require('../services/searchService');
 const { findProjectById } = require('../store/projectStore');
@@ -120,6 +121,13 @@ router.post('/:id/upload', upload.array('files', MAX_UPLOAD_FILES), asyncHandler
     const project = ensureProject(req.params.id);
     const { folderPath } = req.body;
     const result = uploadFiles(project.path, folderPath, req.files);
+    res.json(result);
+}));
+
+router.put('/:id/file', asyncHandler((req, res) => {
+    const project = ensureProject(req.params.id);
+    const { filePath, content } = req.body;
+    const result = saveMarkdownFile(project.path, filePath, content);
     res.json(result);
 }));
 

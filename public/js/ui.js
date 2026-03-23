@@ -1,11 +1,84 @@
 import { SVG_ICONS } from './constants.js';
 import { state, elements } from './state.js';
 
+const AUTH_COOKIE_NAME = 'odh_auth';
+const AUTH_COOKIE_MAX_AGE = 60 * 60; // seconds (1 hour)
+const AUTH_VERIFY_ENDPOINT = '/api/auth/verify';
+
 export function initializeApp() {
+    initializeAuthState();
     loadProjects();
     setupEventListeners();
     setupSidebarResizer();
     restoreSidebarWidth();
+}
+
+// ===== Auth Controls =====
+function initializeAuthState() {
+    syncAuthStateWithCookie();
+    updateAuthUI();
+    if (elements.authLockBtn) {
+        elements.authLockBtn.addEventListener('click', handleAuthLockClick);
+    }
+    setInterval(syncAuthStateWithCookie, 60 * 1000);
+}
+
+function handleAuthLockClick() {
+    if (state.isAuthenticated) {
+        lockSession();
+    } else {
+        requestPassword('Desbloquear cambios', null, { forcePrompt: true });
+    }
+}
+
+function syncAuthStateWithCookie() {
+    const cookieValid = hasValidAuthCookie();
+    if (cookieValid !== state.isAuthenticated) {
+        state.isAuthenticated = cookieValid;
+        updateAuthUI();
+    }
+    return cookieValid;
+}
+
+function hasValidAuthCookie() {
+    return document.cookie.split(';').some(cookie => cookie.trim().startsWith(`${AUTH_COOKIE_NAME}=`));
+}
+
+function setAuthCookie() {
+    document.cookie = `${AUTH_COOKIE_NAME}=1; max-age=${AUTH_COOKIE_MAX_AGE}; path=/; SameSite=Strict`;
+}
+
+function clearAuthCookie() {
+    document.cookie = `${AUTH_COOKIE_NAME}=; max-age=0; path=/; SameSite=Strict`;
+}
+
+function unlockSession() {
+    const wasAuthenticated = state.isAuthenticated;
+    state.isAuthenticated = true;
+    setAuthCookie();
+    updateAuthUI();
+    if (!wasAuthenticated) {
+        showToast('Modo edición desbloqueado durante 1 hora', 'success');
+    }
+}
+
+function lockSession(showNotification = true) {
+    const wasAuthenticated = state.isAuthenticated;
+    state.isAuthenticated = false;
+    clearAuthCookie();
+    updateAuthUI();
+    if (showNotification && wasAuthenticated) {
+        showToast('Modo edición bloqueado', 'info');
+    }
+}
+
+function updateAuthUI() {
+    if (elements.authLockBtn) {
+        elements.authLockBtn.classList.toggle('unlocked', !!state.isAuthenticated);
+        elements.authLockBtn.setAttribute('aria-pressed', state.isAuthenticated ? 'true' : 'false');
+        elements.authLockBtn.title = state.isAuthenticated ? 'Bloquear cambios' : 'Desbloquear cambios';
+    }
+    updateDocEditControls();
 }
 
 function setupEventListeners() {
@@ -48,6 +121,28 @@ function setupEventListeners() {
     elements.inputModalInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') confirmInput();
     });
+
+    if (elements.editDocBtn) {
+        elements.editDocBtn.addEventListener('click', startDocEditing);
+    }
+
+    if (elements.docSaveBtn) {
+        elements.docSaveBtn.addEventListener('click', saveDocEdits);
+    }
+
+    if (elements.docCancelBtn) {
+        elements.docCancelBtn.addEventListener('click', cancelDocEdits);
+    }
+
+    if (elements.docsEditor) {
+        elements.docsEditor.addEventListener('input', handleDocEditorInput);
+        elements.docsEditor.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                saveDocEdits();
+            }
+        });
+    }
     
     // Cerrar modales con Escape
     document.addEventListener('keydown', (e) => {
@@ -56,6 +151,9 @@ function setupEventListeners() {
             hidePasswordModal();
             hideUploadModal();
             hideInputModal();
+            if (state.isEditingDoc) {
+                cancelDocEdits();
+            }
         }
     });
     
@@ -392,6 +490,9 @@ function findReadmeInDocumentacion(tree) {
 }
 
 async function loadFile(projectId, filePath, fileType) {
+    if (!ensureDocEditingClosed()) {
+        return;
+    }
     try {
         const response = await fetch(`/api/projects/${projectId}/file?path=${encodeURIComponent(filePath)}`);
         const data = await response.json();
@@ -400,6 +501,7 @@ async function loadFile(projectId, filePath, fileType) {
         // Asegurar que currentProject apunte al proyecto del archivo cargado
         state.currentProject = { id: projectId };
         state.currentDoc = null;
+        setDocEditingState(false);
         
         // Ocultar panel swagger y compare por defecto
         elements.swaggerPanel.style.display = 'none';
@@ -438,20 +540,11 @@ async function loadFile(projectId, filePath, fileType) {
             switchTab('split');
         } else if (fileType === 'markdown') {
             // Si es un MD, mostrarlo en el panel de docs
-            elements.docsContent.innerHTML = marked.parse(data.content);
-            elements.docsFileName.textContent = data.fileName;
             state.currentDoc = { projectId, path: filePath, content: data.content };
-            
-            // Highlight code blocks
-            elements.docsContent.querySelectorAll('pre code').forEach(block => {
-                if (!block.classList.contains('language-mermaid') && !block.classList.contains('mermaid')) {
-                    hljs.highlightElement(block);
-                }
-            });
-            
-            // Renderizar diagramas Mermaid
-            await renderMermaidDiagrams(elements.docsContent);
-            
+            await renderMarkdownContent(data.content);
+            elements.docsFileName.textContent = data.fileName;
+            setDocEditingState(false);
+            updateDocEditControls();
             switchTab('docs');
         } else if (fileType === 'drawio') {
             // Si es un DrawIO, mostrarlo en el panel de docs con visor embebido
@@ -483,28 +576,186 @@ async function loadDocumentation(projectId, sourcePath) {
             state.currentDoc = null;
             elements.docsContent.innerHTML = '<div class="no-docs-content"><div class="no-docs-icon">📭</div><h3>Sin documentación</h3><p>No se encontró documentación para este archivo.</p></div>';
             elements.docsFileName.textContent = 'Sin documentación';
+            setDocEditingState(false);
+            updateDocEditControls();
             return;
         }
         
         const data = await response.json();
         state.currentDoc = { projectId, path: data.path, content: data.content };
-        
-        elements.docsContent.innerHTML = marked.parse(data.content);
+        await renderMarkdownContent(data.content);
         elements.docsFileName.textContent = data.fileName;
-        
-        // Highlight code blocks in markdown
-        elements.docsContent.querySelectorAll('pre code').forEach(block => {
-            if (!block.classList.contains('language-mermaid') && !block.classList.contains('mermaid')) {
-                hljs.highlightElement(block);
-            }
-        });
-        
-        // Renderizar diagramas Mermaid
-        await renderMermaidDiagrams(elements.docsContent);
+        setDocEditingState(false);
+        updateDocEditControls();
         
     } catch (error) {
         console.error('Error loading documentation:', error);
         state.currentDoc = null;
+        setDocEditingState(false);
+        updateDocEditControls();
+    }
+}
+
+function isMarkdownPath(filePath = '') {
+    return typeof filePath === 'string' && filePath.toLowerCase().endsWith('.md');
+}
+
+function hasEditableMarkdownDoc() {
+    return Boolean(state.currentDoc && state.currentDoc.projectId && isMarkdownPath(state.currentDoc.path));
+}
+
+async function renderMarkdownContent(content) {
+    if (!elements.docsContent) return;
+    elements.docsContent.innerHTML = marked.parse(content);
+    elements.docsContent.querySelectorAll('pre code').forEach(block => {
+        if (!block.classList.contains('language-mermaid') && !block.classList.contains('mermaid')) {
+            hljs.highlightElement(block);
+        }
+    });
+    await renderMermaidDiagrams(elements.docsContent);
+}
+
+function updateDocEditControls() {
+    const hasDoc = hasEditableMarkdownDoc();
+    if (elements.editDocBtn) {
+        const shouldShow = hasDoc && !state.isEditingDoc;
+        elements.editDocBtn.style.display = shouldShow ? 'flex' : 'none';
+        elements.editDocBtn.disabled = !(hasDoc && state.isAuthenticated);
+        elements.editDocBtn.setAttribute('aria-pressed', state.isEditingDoc ? 'true' : 'false');
+        if (!hasDoc) {
+            elements.editDocBtn.title = 'No hay documentación editable';
+        } else {
+            elements.editDocBtn.title = state.isAuthenticated ? 'Editar documentación' : 'Desbloquea el candado para editar';
+        }
+    }
+    if (elements.docSaveBtn) {
+        const canSave = state.isEditingDoc && state.docEditDirty && !state.isDocSaving;
+        elements.docSaveBtn.disabled = !canSave;
+        elements.docSaveBtn.classList.toggle('is-saving', state.isDocSaving);
+        elements.docSaveBtn.title = state.isDocSaving ? 'Guardando...' : 'Guardar cambios';
+    }
+    if (elements.docCancelBtn) {
+        const disableCancel = state.isDocSaving || !state.isEditingDoc;
+        elements.docCancelBtn.disabled = disableCancel;
+    }
+}
+
+function setDocEditingState(isEditing) {
+    state.isEditingDoc = isEditing;
+    state.docEditDirty = false;
+    if (elements.docsPanel) {
+        elements.docsPanel.classList.toggle('editing', isEditing);
+    }
+    if (!isEditing && elements.docsEditor) {
+        elements.docsEditor.value = '';
+    }
+    if (elements.docEditToolbar) {
+        elements.docEditToolbar.classList.toggle('visible', isEditing);
+    }
+    setDocSavingState(false);
+    updateDocEditControls();
+}
+
+function startDocEditing() {
+    if (!hasEditableMarkdownDoc()) {
+        showToast('No hay documentación Markdown cargada', 'error');
+        return;
+    }
+    if (!state.isAuthenticated) {
+        showToast('Desbloquea el candado para editar', 'error');
+        return;
+    }
+    if (!elements.docsEditor) return;
+    setDocEditingState(true);
+    elements.docsEditor.value = state.currentDoc?.content || '';
+    elements.docsEditor.focus();
+    elements.docsEditor.setSelectionRange(elements.docsEditor.value.length, elements.docsEditor.value.length);
+    state.docEditDirty = false;
+}
+
+function handleDocEditorInput() {
+    if (!state.isEditingDoc) return;
+    const original = state.currentDoc?.content || '';
+    const current = elements.docsEditor.value;
+    state.docEditDirty = original !== current;
+    updateDocEditControls();
+}
+
+function cancelDocEdits() {
+    if (!state.isEditingDoc) return;
+    if (state.docEditDirty) {
+        const discard = confirm('Tienes cambios sin guardar. ¿Deseas descartarlos?');
+        if (!discard) return;
+    }
+    exitDocEditMode();
+}
+
+function ensureDocEditingClosed() {
+    if (!state.isEditingDoc) return true;
+    if (state.docEditDirty) {
+        const confirmExit = confirm('Tienes cambios sin guardar en la documentación. ¿Deseas descartarlos?');
+        if (!confirmExit) {
+            return false;
+        }
+    }
+    exitDocEditMode();
+    return true;
+}
+
+function exitDocEditMode() {
+    setDocEditingState(false);
+}
+
+function setDocSavingState(isSaving) {
+    state.isDocSaving = isSaving;
+    updateDocEditControls();
+}
+
+async function saveDocEdits() {
+    if (!state.isEditingDoc || !hasEditableMarkdownDoc()) return;
+    const projectId = state.currentDoc?.projectId;
+    const filePath = state.currentDoc?.path;
+    if (!projectId || !filePath) {
+        showToast('No se pudo determinar el archivo a guardar', 'error');
+        return;
+    }
+    const newContent = elements.docsEditor.value;
+    const originalContent = state.currentDoc?.content || '';
+    if (newContent === originalContent) {
+        showToast('No hay cambios para guardar', 'info');
+        exitDocEditMode();
+        return;
+    }
+    setDocSavingState(true);
+    try {
+        const response = await fetch(`/api/projects/${projectId}/file`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filePath, content: newContent })
+        });
+        if (!response.ok) {
+            const rawError = await response.text();
+            let message = 'Error al guardar la documentación';
+            if (rawError) {
+                try {
+                    const parsed = JSON.parse(rawError);
+                    message = parsed?.error || message;
+                } catch (parseError) {
+                    message = rawError.trim() || message;
+                }
+            }
+            throw new Error(message);
+        }
+        state.currentDoc.content = newContent;
+        await renderMarkdownContent(newContent);
+        switchTab('docs');
+        exitDocEditMode();
+        showToast('Documentación guardada correctamente', 'success');
+    } catch (error) {
+        console.error('Error saving documentation:', error);
+        showToast(error.message || 'Error al guardar la documentación', 'error');
+    } finally {
+        setDocSavingState(false);
     }
 }
 
@@ -1324,8 +1575,16 @@ function hideModal() {
 }
 
 // ===== Modal de contraseña =====
-function requestPassword(title, onSuccess) {
-    state.pendingPasswordAction = onSuccess;
+function requestPassword(title, onSuccess, options = {}) {
+    const { forcePrompt = false } = options;
+    const sessionActive = syncAuthStateWithCookie();
+    if (sessionActive && !forcePrompt) {
+        if (typeof onSuccess === 'function') {
+            onSuccess();
+        }
+        return;
+    }
+    state.pendingPasswordAction = typeof onSuccess === 'function' ? onSuccess : null;
     elements.passwordModalTitle.textContent = title;
     elements.passwordInput.value = '';
     elements.passwordModalOverlay.classList.add('show');
@@ -1335,20 +1594,57 @@ function requestPassword(title, onSuccess) {
 function hidePasswordModal() {
     elements.passwordModalOverlay.classList.remove('show');
     state.pendingPasswordAction = null;
+    setPasswordModalLoading(false);
 }
 
-function validatePassword() {
-    const password = elements.passwordInput.value;
-    if (password === 'ODH123') {
+function setPasswordModalLoading(isLoading) {
+    const confirmBtn = document.getElementById('confirmPasswordBtn');
+    if (confirmBtn) {
+        confirmBtn.disabled = isLoading;
+    }
+}
+
+async function validatePassword() {
+    const password = elements.passwordInput.value.trim();
+    if (!password) {
+        showToast('Introduce la contraseña', 'error');
+        elements.passwordInput.focus();
+        return;
+    }
+
+    setPasswordModalLoading(true);
+
+    try {
+        const response = await fetch(AUTH_VERIFY_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+        });
+
+        if (!response.ok) {
+            let message = 'Contraseña incorrecta';
+            try {
+                const error = await response.json();
+                message = error?.error || message;
+            } catch (parseError) {
+                const text = await response.text();
+                if (text) message = text.trim();
+            }
+            throw new Error(message || 'Contraseña incorrecta');
+        }
+
         const action = state.pendingPasswordAction;
         hidePasswordModal();
-        if (action) {
+        elements.passwordInput.value = '';
+        unlockSession();
+        if (typeof action === 'function') {
             action();
         }
-    } else {
-        showToast('Contraseña incorrecta', 'error');
-        elements.passwordInput.value = '';
-        elements.passwordInput.focus();
+    } catch (error) {
+        showToast(error.message || 'Contraseña incorrecta', 'error');
+        elements.passwordInput.select();
+    } finally {
+        setPasswordModalLoading(false);
     }
 }
 
@@ -2130,7 +2426,9 @@ async function loadDrawio(xmlContent, fileName) {
     `;
     
     elements.docsFileName.textContent = fileName;
-    state.currentDoc = { path: fileName, content: xmlContent };
+    state.currentDoc = null;
+    setDocEditingState(false);
+    updateDocEditControls();
 }
 
 // Función para renderizar diagramas Mermaid

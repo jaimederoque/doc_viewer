@@ -139,6 +139,50 @@ body {
     gap: 14px;
 }
 
+.auth-lock-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    padding: 0;
+}
+
+.auth-lock-btn:hover {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.auth-lock-btn.unlocked {
+    color: var(--accent-success);
+    border-color: var(--accent-success);
+    box-shadow: var(--shadow-glow);
+    background: rgba(63, 185, 80, 0.08);
+}
+
+.auth-lock-btn .lock-icon {
+    display: block;
+}
+
+.auth-lock-btn .lock-open {
+    display: none;
+}
+
+.auth-lock-btn.unlocked .lock-open {
+    display: block;
+}
+
+.auth-lock-btn.unlocked .lock-closed {
+    display: none;
+}
+
 .header h1 {
     font-size: 1rem;
     font-weight: 600;
@@ -1260,6 +1304,109 @@ body {
     border-bottom: 1px solid var(--border-color);
     font-size: 12px;
     color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.panel-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    padding: 0;
+}
+
+.panel-action-btn:hover:not([disabled]) {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.panel-action-btn[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.doc-edit-toolbar {
+    display: none;
+    align-items: center;
+    gap: 6px;
+}
+
+.doc-edit-toolbar.visible {
+    display: flex;
+}
+
+.doc-save-btn {
+    color: var(--accent-success);
+    border-color: var(--accent-success);
+    background: rgba(63, 185, 80, 0.08);
+}
+
+.doc-save-btn:hover:not([disabled]) {
+    box-shadow: 0 0 12px rgba(63, 185, 80, 0.25);
+}
+
+.doc-save-btn.is-saving {
+    opacity: 0.65;
+    cursor: progress;
+}
+
+.doc-cancel-btn {
+    color: var(--accent-danger);
+    border-color: var(--accent-danger);
+    background: rgba(248, 81, 73, 0.08);
+}
+
+.doc-cancel-btn:hover:not([disabled]) {
+    box-shadow: 0 0 12px rgba(248, 81, 73, 0.2);
+}
+
+.docs-editor-container {
+    flex: 1;
+    display: none;
+    background-color: var(--bg-primary);
+}
+
+.docs-panel.editing .docs-editor-container {
+    display: flex;
+}
+
+.docs-panel.editing .markdown-content {
+    display: none;
+}
+
+.docs-editor {
+    width: 100%;
+    border: none;
+    outline: none;
+    resize: none;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 24px 32px;
+}
+
+.edit-doc-btn[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 .code-content {

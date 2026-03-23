@@ -149,11 +149,33 @@ function uploadFiles(projectPath, folderPath, files) {
     };
 }
 
+function saveMarkdownFile(projectPath, relativePath, content) {
+    if (typeof content !== 'string') {
+        throw new BadRequestError('Contenido requerido');
+    }
+
+    const ext = path.extname(relativePath || '').toLowerCase();
+    if (ext !== '.md' && ext !== '.markdown') {
+        throw new BadRequestError('Solo se pueden editar archivos Markdown');
+    }
+
+    const targetPath = resolveProjectPath(projectPath, relativePath);
+    ensureExists(targetPath);
+
+    fs.writeFileSync(targetPath, content, 'utf-8');
+
+    return {
+        success: true,
+        saved: relativePath
+    };
+}
+
 module.exports = {
     getProjectTree,
     getFileContent,
     getDocumentation,
     getRawFile,
     deleteFileOrFolder,
-    uploadFiles
+    uploadFiles,
+    saveMarkdownFile
 };

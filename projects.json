@@ -9,13 +9,33 @@
           "type": "folder",
           "id": "folder-1770716245395",
           "name": "ETL",
-          "items": []
+          "items": [
+            {
+              "type": "project",
+              "id": "1774266760925",
+              "name": "talend_odh_eiac_policies",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\talend_eiac ✅"
+            },
+            {
+              "type": "project",
+              "id": "1774266894636",
+              "name": "talend_odh_vsi_par",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\talend_vsi_par ✅"
+            }
+          ]
         },
         {
           "type": "folder",
           "id": "folder-1770716719928",
-          "name": "MICRO",
-          "items": []
+          "name": "SERVICIOS",
+          "items": [
+            {
+              "type": "project",
+              "id": "1774266702333",
+              "name": "ms_odh_policy",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\ms_odh_policy ✅"
+            }
+          ]
         }
       ]
     },
@@ -27,8 +47,15 @@
         {
           "type": "folder",
           "id": "folder-1770716783504",
-          "name": "MICRO",
-          "items": []
+          "name": "SERVICIOS",
+          "items": [
+            {
+              "type": "project",
+              "id": "1774266677645",
+              "name": "ms_odh_consents",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\ms_odh_consent ✅"
+            }
+          ]
         }
       ]
     },
@@ -48,6 +75,31 @@
           "id": "folder-1773760140387",
           "name": "ETL",
           "items": []
+        },
+        {
+          "type": "folder",
+          "id": "folder-1774271288552",
+          "name": "SERVICIOS",
+          "items": [
+            {
+              "type": "project",
+              "id": "1774271202959",
+              "name": "ms_odh_common_host",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\axaes-odh-common\\axaes-odh-common-host ✅"
+            },
+            {
+              "type": "project",
+              "id": "1774271492301",
+              "name": "ms_odh_common_model",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\axaes-odh-common\\axaes-odh-common-model ✅"
+            },
+            {
+              "type": "project",
+              "id": "1774272225878",
+              "name": "ms_odh_common_projection",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\axaes-odh-common\\axaes-odh-common-projection ✅"
+            }
+          ]
         }
       ]
     },
@@ -60,12 +112,19 @@
           "type": "folder",
           "id": "folder-1770724519761",
           "name": "ETL",
-          "items": []
+          "items": [
+            {
+              "type": "project",
+              "id": "1774266847515",
+              "name": "talend_odh_recibos",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\talend_recibos ✅"
+            }
+          ]
         },
         {
           "type": "folder",
           "id": "folder-1770724525362",
-          "name": "MICRO",
+          "name": "SERVICIOS",
           "items": []
         }
       ]
@@ -79,13 +138,27 @@
           "type": "folder",
           "id": "folder-1770724545573",
           "name": "ETL",
-          "items": []
+          "items": [
+            {
+              "type": "project",
+              "id": "1774266865302",
+              "name": "talend_odh_siniestros_spc",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\talend_siniestros_spc ✅"
+            }
+          ]
         },
         {
           "type": "folder",
           "id": "folder-1770724549039",
-          "name": "MICRO",
-          "items": []
+          "name": "SERVICIOS",
+          "items": [
+            {
+              "type": "project",
+              "id": "1774265921238",
+              "name": "ms_odh_claims",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\axaes-odh-claim ✅"
+            }
+          ]
         }
       ]
     },
@@ -97,7 +170,7 @@
         {
           "type": "folder",
           "id": "folder-1770724513856",
-          "name": "MICRO",
+          "name": "SERVICIOS",
           "items": []
         }
       ]
@@ -116,8 +189,15 @@
         {
           "type": "folder",
           "id": "folder-1770718207126",
-          "name": "MICRO",
-          "items": []
+          "name": "SERVICIOS",
+          "items": [
+            {
+              "type": "project",
+              "id": "1774264892323",
+              "name": "ms_odh_catalogs",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\axaes-odh-catalog ✅"
+            }
+          ]
         }
       ]
     },
@@ -130,13 +210,27 @@
           "type": "folder",
           "id": "folder-1770724498777",
           "name": "ETL",
-          "items": []
+          "items": [
+            {
+              "type": "project",
+              "id": "1774266822867",
+              "name": "talend_odh_personas",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\talend_personas ✅"
+            }
+          ]
         },
         {
           "type": "folder",
           "id": "folder-1770724502639",
-          "name": "MICRO",
-          "items": []
+          "name": "SERVICIOS",
+          "items": [
+            {
+              "type": "project",
+              "id": "1774269960246",
+              "name": "ms_odh_client_host",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\axaes-odh-client-host ✅"
+            }
+          ]
         }
       ]
     },
@@ -148,8 +242,15 @@
         {
           "type": "folder",
           "id": "folder-1770718228117",
-          "name": "MICRO",
-          "items": []
+          "name": "SERVICIOS",
+          "items": [
+            {
+              "type": "project",
+              "id": "1774267603881",
+              "name": "ms_odh_client",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\axaes-odh-client ✅"
+            }
+          ]
         }
       ]
     },
@@ -161,7 +262,7 @@
         {
           "type": "folder",
           "id": "folder-1770719779672",
-          "name": "MICRO",
+          "name": "SERVICIOS",
           "items": []
         }
       ]
@@ -174,11 +275,11 @@
         {
           "type": "folder",
           "id": "folder-1770719788349",
-          "name": "MICRO",
+          "name": "SERVICIOS",
           "items": [
             {
               "type": "project",
-              "id": "1774262561211",
+              "id": "1774264691028",
               "name": "ms_odh_bookmarks_hde",
               "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\axaes-odh-bookmark-hde ✅"
             }
@@ -195,12 +296,19 @@
           "type": "folder",
           "id": "folder-1770724464125",
           "name": "ETL",
-          "items": []
+          "items": [
+            {
+              "type": "project",
+              "id": "1774266804979",
+              "name": "talend_odh_mediadores",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\talend_mediadores ✅"
+            }
+          ]
         },
         {
           "type": "folder",
           "id": "folder-1770724493127",
-          "name": "MICRO",
+          "name": "SERVICIOS",
           "items": []
         }
       ]
@@ -213,7 +321,7 @@
         {
           "type": "folder",
           "id": "folder-1770724539238",
-          "name": "MICRO",
+          "name": "SERVICIOS",
           "items": []
         }
       ]
