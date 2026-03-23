@@ -57,9 +57,9 @@
             },
             {
               "type": "project",
-              "id": "1774266677645",
-              "name": "ms_odh_consents",
-              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\ms_odh_consent ✅"
+              "id": "1774298539190",
+              "name": "ms_odh_consent",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\axaes-odh-consent ✅"
             }
           ]
         }
@@ -74,7 +74,14 @@
           "type": "folder",
           "id": "folder-1770724565405",
           "name": "TRIGGERS",
-          "items": []
+          "items": [
+            {
+              "type": "project",
+              "id": "1774300744227",
+              "name": "mongo_realm_triggers",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\axaes-odh-db-functions ✅\\functions\\pro"
+            }
+          ]
         },
         {
           "type": "folder",
@@ -306,19 +313,6 @@
     },
     {
       "type": "folder",
-      "id": "folder-1770718141437",
-      "name": "INFO COMPETENCIA",
-      "items": [
-        {
-          "type": "folder",
-          "id": "folder-1770719779672",
-          "name": "SERVICIOS",
-          "items": []
-        }
-      ]
-    },
-    {
-      "type": "folder",
       "id": "folder-1770718150366",
       "name": "KPI'S",
       "items": [
@@ -369,12 +363,6 @@
           ]
         }
       ]
-    },
-    {
-      "type": "folder",
-      "id": "folder-1770724539238",
-      "name": "SERVICIOS",
-      "items": []
     }
   ]
 }

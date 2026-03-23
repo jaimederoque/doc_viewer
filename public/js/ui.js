@@ -151,6 +151,7 @@ function setupEventListeners() {
             hidePasswordModal();
             hideUploadModal();
             hideInputModal();
+            hideChangelogModal();
             if (state.isEditingDoc) {
                 cancelDocEdits();
             }
@@ -178,6 +179,16 @@ function setupEventListeners() {
     
     // Botón de comparar Swagger
     elements.compareSwaggerBtn.addEventListener('click', compareSwaggers);
+    
+    // Botón de changelog Swagger
+    elements.changelogSwaggerBtn.addEventListener('click', generateChangelog);
+    
+    // Modal de changelog
+    document.getElementById('closeChangelogModal').addEventListener('click', hideChangelogModal);
+    document.getElementById('closeChangelogBtn').addEventListener('click', hideChangelogModal);
+    elements.changelogModalOverlay.addEventListener('click', (e) => {
+        if (e.target === elements.changelogModalOverlay) hideChangelogModal();
+    });
     
     // Toggle de tema
     const themeToggle = document.getElementById('themeToggle');
@@ -666,10 +677,29 @@ function startDocEditing() {
         return;
     }
     if (!elements.docsEditor) return;
+    
+    // Capturar posición de scroll del contenido renderizado antes de cambiar a modo edición
+    const docsContent = elements.docsContent;
+    const scrollRatio = docsContent && docsContent.scrollHeight > docsContent.clientHeight
+        ? docsContent.scrollTop / (docsContent.scrollHeight - docsContent.clientHeight)
+        : 0;
+    
     setDocEditingState(true);
     elements.docsEditor.value = state.currentDoc?.content || '';
-    elements.docsEditor.focus();
-    elements.docsEditor.setSelectionRange(elements.docsEditor.value.length, elements.docsEditor.value.length);
+    
+    // Usar setTimeout para asegurar que el layout del textarea esté completo
+    setTimeout(() => {
+        // Colocar el cursor al inicio primero (antes de focus) para evitar scroll al final
+        elements.docsEditor.setSelectionRange(0, 0);
+        elements.docsEditor.focus({ preventScroll: true });
+        
+        // Aplicar posición de scroll proporcional al textarea
+        const maxScroll = elements.docsEditor.scrollHeight - elements.docsEditor.clientHeight;
+        if (maxScroll > 0) {
+            elements.docsEditor.scrollTop = Math.round(maxScroll * scrollRatio);
+        }
+    }, 50);
+    
     state.docEditDirty = false;
 }
 
@@ -1988,16 +2018,22 @@ async function populateSwaggerSelectors() {
     leftSelect.innerHTML = '<option value="">Seleccionar archivo...</option>';
     rightSelect.innerHTML = '<option value="">Seleccionar archivo...</option>';
     
+    // Filtrar por proyecto actual
+    const currentProjectId = state.currentProject ? state.currentProject.id : null;
+    const filesToShow = currentProjectId
+        ? state.swaggerFiles.filter(f => f.projectId === currentProjectId)
+        : state.swaggerFiles;
+    
     // Añadir opciones
-    for (const file of state.swaggerFiles) {
+    for (const file of filesToShow) {
         const optionValue = JSON.stringify({ projectId: file.projectId, path: file.path });
-        const optionText = `${file.projectName} / ${file.path}`;
+        const optionText = currentProjectId ? file.path : `${file.projectName} / ${file.path}`;
         
         leftSelect.innerHTML += `<option value='${optionValue}'>${optionText}</option>`;
         rightSelect.innerHTML += `<option value='${optionValue}'>${optionText}</option>`;
     }
     
-    // Restaurar valores si existen
+    // Restaurar valores si existen y siguen visibles
     if (leftValue) leftSelect.value = leftValue;
     if (rightValue) rightSelect.value = rightValue;
     
@@ -2554,4 +2590,397 @@ function setupMermaidDrag(container, diagram) {
         container.scrollLeft = scrollLeft - walkX;
         container.scrollTop = scrollTop - walkY;
     });
+}
+
+// ===== Changelog Swagger =====
+function hideChangelogModal() {
+    elements.changelogModalOverlay.classList.remove('show');
+}
+
+function showChangelogModal(html) {
+    elements.changelogContent.innerHTML = html;
+    elements.changelogModalOverlay.classList.add('show');
+}
+
+async function generateChangelog() {
+    const leftValue = elements.swaggerLeftSelect.value;
+    const rightValue = elements.swaggerRightSelect.value;
+
+    if (!leftValue || !rightValue) {
+        showToast('Selecciona ambos archivos Swagger para generar el changelog', 'error');
+        return;
+    }
+
+    const leftData = JSON.parse(leftValue);
+    const rightData = JSON.parse(rightValue);
+
+    try {
+        const [leftResponse, rightResponse] = await Promise.all([
+            fetch(`/api/projects/${leftData.projectId}/file?path=${encodeURIComponent(leftData.path)}`),
+            fetch(`/api/projects/${rightData.projectId}/file?path=${encodeURIComponent(rightData.path)}`)
+        ]);
+
+        const [leftFile, rightFile] = await Promise.all([
+            leftResponse.json(),
+            rightResponse.json()
+        ]);
+
+        const leftSpec = parseSwaggerContent(leftFile.content);
+        const rightSpec = parseSwaggerContent(rightFile.content);
+
+        if (!leftSpec || !rightSpec) {
+            showToast('Error al parsear los archivos Swagger', 'error');
+            return;
+        }
+
+        const changes = computeSwaggerChangelog(leftSpec, rightSpec);
+        const html = renderChangelogHtml(changes, leftFile.fileName, rightFile.fileName);
+        showChangelogModal(html);
+    } catch (error) {
+        console.error('Error generating changelog:', error);
+        showToast('Error al generar el changelog', 'error');
+    }
+}
+
+function parseSwaggerContent(content) {
+    try {
+        return jsyaml.load(content);
+    } catch (_) {
+        try {
+            return JSON.parse(content);
+        } catch (__) {
+            return null;
+        }
+    }
+}
+
+function computeSwaggerChangelog(left, right) {
+    const changes = { removed: [], added: [], moved: [] };
+
+    // Compare paths (endpoints)
+    const leftPaths = left.paths || {};
+    const rightPaths = right.paths || {};
+    compareEndpoints(leftPaths, rightPaths, changes);
+
+    // Compare schemas / definitions
+    const leftSchemas = getSchemas(left);
+    const rightSchemas = getSchemas(right);
+    compareSection('Schema', leftSchemas, rightSchemas, changes);
+
+    // Compare top-level info
+    compareInfo(left, right, changes);
+
+    // Compare security definitions
+    const leftSecurity = left.securityDefinitions || left.components?.securitySchemes || {};
+    const rightSecurity = right.securityDefinitions || right.components?.securitySchemes || {};
+    compareSection('Security Scheme', leftSecurity, rightSecurity, changes);
+
+    // Compare tags
+    compareTags(left.tags || [], right.tags || [], changes);
+
+    return changes;
+}
+
+function getSchemas(spec) {
+    // OpenAPI 3.x
+    if (spec.components && spec.components.schemas) return spec.components.schemas;
+    // Swagger 2.x
+    if (spec.definitions) return spec.definitions;
+    return {};
+}
+
+function compareEndpoints(leftPaths, rightPaths, changes) {
+    const leftEndpoints = flattenEndpoints(leftPaths);
+    const rightEndpoints = flattenEndpoints(rightPaths);
+
+    const leftKeys = new Set(Object.keys(leftEndpoints));
+    const rightKeys = new Set(Object.keys(rightEndpoints));
+
+    // Removed
+    for (const key of leftKeys) {
+        if (!rightKeys.has(key)) {
+            // Check if operationId moved to a different path
+            const op = leftEndpoints[key];
+            const movedTo = findByOperationId(rightEndpoints, op.operationId);
+            if (movedTo) {
+                changes.moved.push({
+                    type: 'Endpoint',
+                    name: op.operationId || key,
+                    from: key,
+                    to: movedTo.key,
+                    detail: `${op.summary || ''}`
+                });
+            } else {
+                changes.removed.push({
+                    type: 'Endpoint',
+                    name: key,
+                    detail: op.summary || ''
+                });
+            }
+        }
+    }
+
+    // Added
+    for (const key of rightKeys) {
+        if (!leftKeys.has(key)) {
+            const op = rightEndpoints[key];
+            const movedFrom = findByOperationId(leftEndpoints, op.operationId);
+            if (!movedFrom) {
+                changes.added.push({
+                    type: 'Endpoint',
+                    name: key,
+                    detail: op.summary || ''
+                });
+            }
+        }
+    }
+
+    // Changed (same key, different content)
+    for (const key of leftKeys) {
+        if (rightKeys.has(key)) {
+            const diffs = compareEndpointDetail(leftEndpoints[key], rightEndpoints[key]);
+            for (const d of diffs) {
+                changes.moved.push({
+                    type: 'Endpoint (modificado)',
+                    name: key,
+                    from: d.from,
+                    to: d.to,
+                    detail: d.field
+                });
+            }
+        }
+    }
+}
+
+function flattenEndpoints(paths) {
+    const result = {};
+    for (const [path, methods] of Object.entries(paths)) {
+        for (const [method, op] of Object.entries(methods)) {
+            if (typeof op !== 'object' || method.startsWith('x-')) continue;
+            const key = `${method.toUpperCase()} ${path}`;
+            result[key] = { ...op, _method: method, _path: path };
+        }
+    }
+    return result;
+}
+
+function findByOperationId(endpoints, operationId) {
+    if (!operationId) return null;
+    for (const [key, op] of Object.entries(endpoints)) {
+        if (op.operationId === operationId) return { key, op };
+    }
+    return null;
+}
+
+function compareEndpointDetail(left, right) {
+    const diffs = [];
+    // Excluir propiedades internas antes de comparar
+    const normalize = (op) => {
+        const { _method, _path, ...rest } = op;
+        return rest;
+    };
+    const leftNorm = normalize(left);
+    const rightNorm = normalize(right);
+
+    // Comparación profunda del endpoint completo
+    if (JSON.stringify(leftNorm) === JSON.stringify(rightNorm)) {
+        return diffs;
+    }
+
+    // Summary
+    if ((left.summary || '') !== (right.summary || '')) {
+        diffs.push({ field: 'summary', from: left.summary || '(vacío)', to: right.summary || '(vacío)' });
+    }
+    // Description
+    if ((left.description || '') !== (right.description || '')) {
+        diffs.push({ field: 'description', from: truncate(left.description) || '(vacío)', to: truncate(right.description) || '(vacío)' });
+    }
+    // Tags
+    const leftTags = (left.tags || []).sort().join(', ');
+    const rightTags = (right.tags || []).sort().join(', ');
+    if (leftTags !== rightTags) {
+        diffs.push({ field: 'tags', from: leftTags || '(vacío)', to: rightTags || '(vacío)' });
+    }
+    // Parameters
+    if (JSON.stringify(left.parameters || []) !== JSON.stringify(right.parameters || [])) {
+        const leftNames = (left.parameters || []).map(p => p.name).sort().join(', ');
+        const rightNames = (right.parameters || []).map(p => p.name).sort().join(', ');
+        diffs.push({ field: 'parameters', from: leftNames || '(vacío)', to: rightNames || '(vacío)' });
+    }
+    // Request body (OpenAPI 3.x)
+    if (JSON.stringify(left.requestBody || {}) !== JSON.stringify(right.requestBody || {})) {
+        diffs.push({ field: 'requestBody', from: 'cambiado', to: 'cambiado' });
+    }
+    // Responses
+    if (JSON.stringify(left.responses || {}) !== JSON.stringify(right.responses || {})) {
+        const leftCodes = Object.keys(left.responses || {}).sort().join(', ');
+        const rightCodes = Object.keys(right.responses || {}).sort().join(', ');
+        diffs.push({ field: 'responses', from: leftCodes, to: rightCodes });
+    }
+    // Deprecated
+    if ((left.deprecated || false) !== (right.deprecated || false)) {
+        diffs.push({ field: 'deprecated', from: String(!!left.deprecated), to: String(!!right.deprecated) });
+    }
+    // Si hay diferencias profundas pero ningún campo específico lo detectó, reportar cambio genérico
+    if (diffs.length === 0) {
+        diffs.push({ field: 'contenido', from: 'versión anterior', to: 'versión nueva' });
+    }
+    return diffs;
+}
+
+function truncate(str, max = 60) {
+    if (!str) return str;
+    return str.length > max ? str.substring(0, max) + '...' : str;
+}
+
+function compareSection(label, leftObj, rightObj, changes) {
+    const leftKeys = Object.keys(leftObj);
+    const rightKeys = new Set(Object.keys(rightObj));
+
+    for (const key of leftKeys) {
+        if (!rightKeys.has(key)) {
+            changes.removed.push({ type: label, name: key, detail: '' });
+        }
+    }
+    for (const key of rightKeys) {
+        if (!leftKeys.includes(key)) {
+            changes.added.push({ type: label, name: key, detail: '' });
+        }
+    }
+    // Detect modified schemas (same name, different content)
+    for (const key of leftKeys) {
+        if (rightKeys.has(key)) {
+            if (JSON.stringify(leftObj[key]) !== JSON.stringify(rightObj[key])) {
+                changes.moved.push({
+                    type: `${label} (modificado)`,
+                    name: key,
+                    from: 'versión anterior',
+                    to: 'versión nueva',
+                    detail: 'Contenido cambiado'
+                });
+            }
+        }
+    }
+}
+
+function compareInfo(left, right, changes) {
+    const l = left.info || {};
+    const r = right.info || {};
+    if ((l.version || '') !== (r.version || '')) {
+        changes.moved.push({
+            type: 'Info',
+            name: 'version',
+            from: l.version || '(vacío)',
+            to: r.version || '(vacío)',
+            detail: 'Versión de la API'
+        });
+    }
+    if ((l.title || '') !== (r.title || '')) {
+        changes.moved.push({
+            type: 'Info',
+            name: 'title',
+            from: l.title || '(vacío)',
+            to: r.title || '(vacío)',
+            detail: 'Título de la API'
+        });
+    }
+}
+
+function compareTags(leftTags, rightTags, changes) {
+    const leftNames = new Set(leftTags.map(t => t.name));
+    const rightNames = new Set(rightTags.map(t => t.name));
+    for (const name of leftNames) {
+        if (!rightNames.has(name)) {
+            changes.removed.push({ type: 'Tag', name, detail: '' });
+        }
+    }
+    for (const name of rightNames) {
+        if (!leftNames.has(name)) {
+            changes.added.push({ type: 'Tag', name, detail: '' });
+        }
+    }
+}
+
+function renderChangelogHtml(changes, leftName, rightName) {
+    const { removed, added, moved } = changes;
+    const total = removed.length + added.length + moved.length;
+
+    if (total === 0) {
+        return `<div class="changelog-empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <p>No se encontraron diferencias entre los dos Swagger.</p>
+        </div>`;
+    }
+
+    let html = `<div class="changelog-summary">
+        <span class="changelog-file">${escapeHtml(leftName)}</span>
+        <span class="changelog-arrow">&rarr;</span>
+        <span class="changelog-file">${escapeHtml(rightName)}</span>
+        <div class="changelog-stats">
+            <span class="changelog-stat removed">&minus;${removed.length} eliminado${removed.length !== 1 ? 's' : ''}</span>
+            <span class="changelog-stat added">+${added.length} añadido${added.length !== 1 ? 's' : ''}</span>
+            <span class="changelog-stat modified">~${moved.length} modificado${moved.length !== 1 ? 's' : ''}</span>
+        </div>
+    </div>`;
+
+    if (removed.length > 0) {
+        html += `<div class="changelog-section">
+            <h4 class="changelog-section-title removed">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Eliminados (${removed.length})
+            </h4>
+            <ul class="changelog-list">`;
+        for (const item of removed) {
+            html += `<li class="changelog-item removed">
+                <span class="changelog-badge">${escapeHtml(item.type)}</span>
+                <span class="changelog-name">${escapeHtml(item.name)}</span>
+                ${item.detail ? `<span class="changelog-detail">${escapeHtml(item.detail)}</span>` : ''}
+            </li>`;
+        }
+        html += `</ul></div>`;
+    }
+
+    if (added.length > 0) {
+        html += `<div class="changelog-section">
+            <h4 class="changelog-section-title added">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Añadidos (${added.length})
+            </h4>
+            <ul class="changelog-list">`;
+        for (const item of added) {
+            html += `<li class="changelog-item added">
+                <span class="changelog-badge">${escapeHtml(item.type)}</span>
+                <span class="changelog-name">${escapeHtml(item.name)}</span>
+                ${item.detail ? `<span class="changelog-detail">${escapeHtml(item.detail)}</span>` : ''}
+            </li>`;
+        }
+        html += `</ul></div>`;
+    }
+
+    if (moved.length > 0) {
+        html += `<div class="changelog-section">
+            <h4 class="changelog-section-title modified">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                Modificados / Movidos (${moved.length})
+            </h4>
+            <ul class="changelog-list">`;
+        for (const item of moved) {
+            html += `<li class="changelog-item modified">
+                <span class="changelog-badge">${escapeHtml(item.type)}</span>
+                <span class="changelog-name">${escapeHtml(item.name)}</span>
+                <span class="changelog-change">
+                    <span class="changelog-from">${escapeHtml(item.from)}</span>
+                    <span class="changelog-arrow-sm">&rarr;</span>
+                    <span class="changelog-to">${escapeHtml(item.to)}</span>
+                </span>
+                ${item.detail ? `<span class="changelog-detail">${escapeHtml(item.detail)}</span>` : ''}
+            </li>`;
+        }
+        html += `</ul></div>`;
+    }
+
+    return html;
 }

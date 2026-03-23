@@ -69,5 +69,8 @@ export const elements = {
     editDocBtn: document.getElementById('editDocBtn'),
     docEditToolbar: document.getElementById('docEditToolbar'),
     docSaveBtn: document.getElementById('docSaveBtn'),
-    docCancelBtn: document.getElementById('docCancelBtn')
+    docCancelBtn: document.getElementById('docCancelBtn'),
+    changelogSwaggerBtn: document.getElementById('changelogSwaggerBtn'),
+    changelogModalOverlay: document.getElementById('changelogModalOverlay'),
+    changelogContent: document.getElementById('changelogContent')
 };
