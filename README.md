@@ -11,6 +11,25 @@ Aplicación web para visualizar documentación de proyectos Java con estructura 
 - **Vista dividida**: Visualiza código y documentación lado a lado
 - **Enlace automático**: Detecta automáticamente la documentación asociada a cada archivo Java
 
+## 🏗️ Arquitectura
+
+### Backend (`src/`)
+- `config/env.js`: variables de entorno, límites de subida y rutas base centralizadas.
+- `store/projectStore.js`: persistencia en memoria + lectura/escritura de `projects.json`.
+- `services/projectsService.js`: operaciones sobre la jerarquía (carpetas, proyectos, reordenación).
+- `services/fileService.js`: lectura/escritura de archivos, árbol de ficheros, documentación y subidas.
+- `services/searchService.js`: búsqueda textual recursiva con extensiones permitidas.
+- `routes/projectsRouter.js`: API REST agrupada bajo `/api/projects` con manejo de errores homogéneo.
+- `app.js`/`server.js`: bootstrap del servidor Express y logging de arranque.
+
+### Frontend (`public/js/`)
+- `constants.js`: catálogo de iconos SVG reutilizables.
+- `state.js`: estado global y referencias al DOM compartidas entre módulos.
+- `ui.js`: lógica de interacción (sidebar, visor, modales, Swagger, drag & drop) expuesta vía `initializeApp`.
+- `main.js`: punto de entrada ES Modules que inicializa la aplicación tras `DOMContentLoaded`.
+
+Esta separación permite sustituir o probar capas de forma aislada y evita los archivos monolíticos originales.
+
 ## 📋 Requisitos
 
 - Node.js 14 o superior

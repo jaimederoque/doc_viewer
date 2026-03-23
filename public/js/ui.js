@@ -1,102 +1,12 @@
-// ===== Iconos SVG =====
-const SVG_ICONS = {
-    folder: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>',
-    folderOpen: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><path d="M2 10h20"></path></svg>',
-    docs: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>',
-    swagger: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>',
-    java: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
-    javascript: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>',
-    typescript: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M12 8v8"></path><path d="M17 8h-5"></path></svg>',
-    markdown: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>',
-    drawio: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8" cy="8" r="2"></circle><path d="M21 15l-5-5L5 21"></path></svg>',
-    project: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3zM3 9h18M9 21V9"></path></svg>',
-    search: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
-    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
-    chevron: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>',
-    sidebarFolder: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>',
-    edit: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
-    drag: '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="2"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="9" cy="18" r="2"/><circle cx="15" cy="18" r="2"/></svg>'
-};
+import { SVG_ICONS } from './constants.js';
+import { state, elements } from './state.js';
 
-// ===== Estado de la aplicación =====
-const state = {
-    projectsData: { items: [] }, // Estructura jerárquica de proyectos y carpetas
-    projects: [], // Lista plana de proyectos (para compatibilidad)
-    currentProject: null,
-    currentFile: null,
-    currentDoc: null,
-    viewMode: 'code', // 'code', 'docs', 'split', 'swagger', 'swagger-compare'
-    swaggerFiles: [], // Lista de todos los archivos swagger disponibles
-    isSwaggerMode: false,
-    pendingPasswordAction: null, // Acción pendiente tras validar contraseña
-    pendingInputAction: null, // Acción pendiente tras confirmar input
-    uploadTarget: null, // Información de la carpeta destino para subir archivos
-    draggedItem: null, // Elemento actual en drag & drop
-    expandedSidebarFolders: new Set() // Carpetas expandidas en el sidebar
-};
-
-// ===== Elementos del DOM =====
-const elements = {
-    projectsList: document.getElementById('projectsList'),
-    welcomeScreen: document.getElementById('welcomeScreen'),
-    fileViewer: document.getElementById('fileViewer'),
-    codePanel: document.getElementById('codePanel'),
-    docsPanel: document.getElementById('docsPanel'),
-    swaggerPanel: document.getElementById('swaggerPanel'),
-    swaggerComparePanel: document.getElementById('swaggerComparePanel'),
-    codeContent: document.getElementById('codeContent'),
-    docsContent: document.getElementById('docsContent'),
-    swaggerContent: document.getElementById('swaggerContent'),
-    codeFileName: document.getElementById('codeFileName'),
-    docsFileName: document.getElementById('docsFileName'),
-    swaggerFileName: document.getElementById('swaggerFileName'),
-    modalOverlay: document.getElementById('modalOverlay'),
-    projectName: document.getElementById('projectName'),
-    projectPath: document.getElementById('projectPath'),
-    toastContainer: document.getElementById('toastContainer'),
-    noDocs: document.getElementById('noDocs'),
-    viewerContent: document.querySelector('.viewer-content'),
-    // Tabs
-    normalTabs: document.getElementById('normalTabs'),
-    swaggerTabs: document.getElementById('swaggerTabs'),
-    // Compare elements
-    swaggerLeftSelect: document.getElementById('swaggerLeftSelect'),
-    swaggerRightSelect: document.getElementById('swaggerRightSelect'),
-    compareSwaggerBtn: document.getElementById('compareSwaggerBtn'),
-    yamlLeftContent: document.getElementById('yamlLeftContent'),
-    yamlRightContent: document.getElementById('yamlRightContent'),
-    yamlLeftCode: document.getElementById('yamlLeftCode'),
-    yamlRightCode: document.getElementById('yamlRightCode'),
-    compareLeftHeader: document.getElementById('compareLeftHeader'),
-    compareRightHeader: document.getElementById('compareRightHeader'),
-    // Minimaps
-    diffMinimapLeft: document.getElementById('diffMinimapLeft'),
-    diffMinimapRight: document.getElementById('diffMinimapRight'),
-    // Password modal
-    passwordModalOverlay: document.getElementById('passwordModalOverlay'),
-    passwordInput: document.getElementById('passwordInput'),
-    passwordModalTitle: document.getElementById('passwordModalTitle'),
-    // Upload modal
-    uploadModalOverlay: document.getElementById('uploadModalOverlay'),
-    uploadTargetPath: document.getElementById('uploadTargetPath'),
-    fileInput: document.getElementById('fileInput'),
-    // Input modal
-    inputModalOverlay: document.getElementById('inputModalOverlay'),
-    inputModalTitle: document.getElementById('inputModalTitle'),
-    inputModalLabel: document.getElementById('inputModalLabel'),
-    inputModalInput: document.getElementById('inputModalInput'),
-    // Sidebar resizer
-    sidebar: document.getElementById('sidebar'),
-    sidebarResizer: document.getElementById('sidebarResizer')
-};
-
-// ===== Inicialización =====
-document.addEventListener('DOMContentLoaded', () => {
+export function initializeApp() {
     loadProjects();
     setupEventListeners();
     setupSidebarResizer();
     restoreSidebarWidth();
-});
+}
 
 function setupEventListeners() {
     // Botones para añadir proyecto (con protección de contraseña)

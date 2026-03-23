@@ -9,27 +9,13 @@
           "type": "folder",
           "id": "folder-1770716245395",
           "name": "ETL",
-          "items": [
-            {
-              "type": "project",
-              "id": "1773760525069",
-              "name": "talend_vsi_par",
-              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\talend_vsi_par"
-            }
-          ]
+          "items": []
         },
         {
           "type": "folder",
           "id": "folder-1770716719928",
           "name": "MICRO",
-          "items": [
-            {
-              "type": "project",
-              "id": "1770305987183",
-              "name": "ms_odh_policy",
-              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\ms_odh_policy"
-            }
-          ]
+          "items": []
         }
       ]
     },
@@ -42,14 +28,7 @@
           "type": "folder",
           "id": "folder-1770716783504",
           "name": "MICRO",
-          "items": [
-            {
-              "type": "project",
-              "id": "1770628379941",
-              "name": "ms_odh_consents",
-              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\ms_odh_consent"
-            }
-          ]
+          "items": []
         }
       ]
     },
@@ -62,27 +41,13 @@
           "type": "folder",
           "id": "folder-1770724565405",
           "name": "TRIGGERS",
-          "items": [
-            {
-              "type": "project",
-              "id": "1770378693646",
-              "name": "triggers_odh",
-              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\MS_ODH\\axaes-odh-db-functions\\functions\\pro"
-            }
-          ]
+          "items": []
         },
         {
           "type": "folder",
           "id": "folder-1773760140387",
           "name": "ETL",
-          "items": [
-            {
-              "type": "project",
-              "id": "1773760314357",
-              "name": "talend_eiac",
-              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\talend_eiac"
-            }
-          ]
+          "items": []
         }
       ]
     },
@@ -95,14 +60,7 @@
           "type": "folder",
           "id": "folder-1770724519761",
           "name": "ETL",
-          "items": [
-            {
-              "type": "project",
-              "id": "1771933381674",
-              "name": "talend_recibos",
-              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\talend_recibos"
-            }
-          ]
+          "items": []
         },
         {
           "type": "folder",
@@ -121,14 +79,7 @@
           "type": "folder",
           "id": "folder-1770724545573",
           "name": "ETL",
-          "items": [
-            {
-              "type": "project",
-              "id": "1773759962607",
-              "name": "talend_siniestros_spc",
-              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\talend_siniestros_spc"
-            }
-          ]
+          "items": []
         },
         {
           "type": "folder",
@@ -179,14 +130,7 @@
           "type": "folder",
           "id": "folder-1770724498777",
           "name": "ETL",
-          "items": [
-            {
-              "type": "project",
-              "id": "1771929963324",
-              "name": "talend_personas",
-              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\talend_personas"
-            }
-          ]
+          "items": []
         },
         {
           "type": "folder",
@@ -231,7 +175,14 @@
           "type": "folder",
           "id": "folder-1770719788349",
           "name": "MICRO",
-          "items": []
+          "items": [
+            {
+              "type": "project",
+              "id": "1774262561211",
+              "name": "ms_odh_bookmarks_hde",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\axaes-odh-bookmark-hde ✅"
+            }
+          ]
         }
       ]
     },
@@ -244,14 +195,7 @@
           "type": "folder",
           "id": "folder-1770724464125",
           "name": "ETL",
-          "items": [
-            {
-              "type": "project",
-              "id": "1770736848796",
-              "name": "talend_mediadores",
-              "path": "C:\\Users\\A025WR\\OneDrive - AXA\\Desktop\\talend_mediadores"
-            }
-          ]
+          "items": []
         },
         {
           "type": "folder",
