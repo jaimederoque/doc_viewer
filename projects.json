@@ -12,15 +12,22 @@
           "items": [
             {
               "type": "project",
-              "id": "1774266760925",
-              "name": "talend_odh_eiac_policies",
-              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\talend_eiac ✅"
-            },
-            {
-              "type": "project",
               "id": "1774341495288",
               "name": "talend_odh_vsi_par_pcra",
               "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\talend_vsi_par_pcra ✅"
+            },
+            {
+              "type": "folder",
+              "id": "folder-1774347817565",
+              "name": "EIAC",
+              "items": [
+                {
+                  "type": "project",
+                  "id": "1774266760925",
+                  "name": "talend_odh_eiac_policies",
+                  "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\talend_eiac ✅"
+                }
+              ]
             }
           ]
         },

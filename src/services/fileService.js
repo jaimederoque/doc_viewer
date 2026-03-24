@@ -191,9 +191,41 @@ function collectMarkdownFiles(dirPath, basePath, relativeTo = '') {
     return results;
 }
 
+function collectSwaggerFiles(projectPath) {
+    const results = [];
+    // Look for a swagger/ folder at the project root level (same level as documentacion/)
+    const swaggerDir = path.join(projectPath, 'swagger');
+    if (!fs.existsSync(swaggerDir)) return results;
+
+    let entries;
+    try {
+        entries = fs.readdirSync(swaggerDir, { withFileTypes: true });
+    } catch {
+        return results;
+    }
+
+    // Collect only direct YAML/YML files (not from subdirectories like hist/)
+    for (const entry of entries) {
+        if (!entry.isFile()) continue;
+        const ext = path.extname(entry.name).toLowerCase();
+        if (ext === '.yml' || ext === '.yaml') {
+            results.push({
+                relativePath: `swagger/${entry.name}`,
+                fullPath: path.join(swaggerDir, entry.name)
+            });
+        }
+    }
+
+    results.sort((a, b) => a.relativePath.localeCompare(b.relativePath, 'es'));
+    return results;
+}
+
 function getMergedMarkdown(projectPath, projectName, projectType) {
     const normalizedPath = path.normalize(projectPath);
     const mdFiles = collectMarkdownFiles(normalizedPath, normalizedPath);
+
+    // Collect swagger YAML files (only direct children of swagger/, not subdirs like hist/)
+    const swaggerFiles = collectSwaggerFiles(normalizedPath);
 
     // Separate README from the rest
     let readmeFile = null;
@@ -234,6 +266,16 @@ function getMergedMarkdown(projectPath, projectName, projectType) {
         const content = fs.readFileSync(f.fullPath, 'utf-8');
         const baseName = path.basename(f.relativePath);
         parts.push(`### ${baseName}\n\n> Fuente: \`${f.relativePath}\`\n\n${content}\n`);
+    }
+
+    // Append swagger YAML files at the end
+    if (swaggerFiles.length > 0) {
+        parts.push(`---\n\n## 📋 Swagger\n`);
+        for (const f of swaggerFiles) {
+            const content = fs.readFileSync(f.fullPath, 'utf-8');
+            const baseName = path.basename(f.relativePath);
+            parts.push(`### ${baseName}\n\n> Fuente: \`${f.relativePath}\`\n\n\`\`\`yaml\n${content}\n\`\`\`\n`);
+        }
     }
 
     return parts.join('\n');
