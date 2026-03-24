@@ -4,6 +4,7 @@ export const state = {
     currentProject: null,
     currentFile: null,
     currentDoc: null,
+    currentDrawio: null,
     viewMode: 'code',
     swaggerFiles: [],
     isSwaggerMode: false,

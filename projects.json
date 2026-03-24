@@ -182,6 +182,12 @@
               "id": "1774266865302",
               "name": "talend_odh_siniestros_spc",
               "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\talend_siniestros_spc ✅"
+            },
+            {
+              "type": "project",
+              "id": "1774346526186",
+              "name": "talend_odh_siniestros_pvi_siard",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\talend_siniestros_siard_pvi ✅"
             }
           ]
         },

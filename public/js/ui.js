@@ -513,6 +513,7 @@ async function loadFile(projectId, filePath, fileType) {
         state.currentProject = { id: projectId };
         state.currentDoc = null;
         setDocEditingState(false);
+        cleanupDrawioViewer();
         
         // Ocultar panel swagger y compare por defecto
         elements.swaggerPanel.style.display = 'none';
@@ -2389,50 +2390,6 @@ marked.setOptions({
     headerIds: true
 });
 
-// Función para decodificar contenido comprimido de DrawIO
-function decodeDrawioContent(compressedData) {
-    try {
-        // Paso 1: Base64 decode
-        const decoded = atob(compressedData);
-        
-        // Paso 2: Convert to Uint8Array
-        const uint8Array = new Uint8Array(decoded.length);
-        for (let i = 0; i < decoded.length; i++) {
-            uint8Array[i] = decoded.charCodeAt(i);
-        }
-        
-        // Paso 3: Inflate con pako
-        const inflated = pako.inflateRaw(uint8Array, { to: 'string' });
-        
-        // Paso 4: URL decode
-        return decodeURIComponent(inflated);
-    } catch (e) {
-        console.error('Error decodificando DrawIO:', e);
-        return null;
-    }
-}
-
-// Función para comprimir contenido para el visor de DrawIO
-function encodeDrawioContent(xmlContent) {
-    try {
-        // Paso 1: URL encode
-        const urlEncoded = encodeURIComponent(xmlContent);
-        
-        // Paso 2: Deflate con pako
-        const deflated = pako.deflateRaw(urlEncoded);
-        
-        // Paso 3: Base64 encode
-        let binary = '';
-        for (let i = 0; i < deflated.length; i++) {
-            binary += String.fromCharCode(deflated[i]);
-        }
-        return btoa(binary);
-    } catch (e) {
-        console.error('Error codificando DrawIO:', e);
-        return null;
-    }
-}
-
 // Función para extraer las pestañas/páginas de un archivo DrawIO
 function parseDrawioPages(xmlContent) {
     try {
@@ -2442,7 +2399,8 @@ function parseDrawioPages(xmlContent) {
         if (diagrams.length === 0) return [];
         return Array.from(diagrams).map((d, i) => ({
             name: d.getAttribute('name') || `Página ${i + 1}`,
-            index: i
+            index: i,
+            id: d.getAttribute('id') || null
         }));
     } catch (e) {
         console.error('Error parseando páginas DrawIO:', e);
@@ -2450,49 +2408,116 @@ function parseDrawioPages(xmlContent) {
     }
 }
 
-// Función para construir la URL del visor DrawIO para una página concreta
-function buildDrawioViewerUrl(xmlContent, fileName, pageIndex) {
-    const compressed = encodeDrawioContent(xmlContent);
-    if (!compressed) return null;
-    return `https://viewer.diagrams.net/?tags=%7B%7D&highlight=0000ff&nav=1&title=${encodeURIComponent(fileName)}&lightbox=1&page=${pageIndex}#R${compressed}`;
+function cleanupDrawioViewer() {
+    const canRevoke = typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function';
+    if (state.currentDrawio && state.currentDrawio.objectUrl && canRevoke) {
+        try {
+            URL.revokeObjectURL(state.currentDrawio.objectUrl);
+        } catch (_) {
+            // Ignorar fallos al revocar la URL temporal
+        }
+    }
+    state.currentDrawio = null;
 }
 
-// Función para cargar y mostrar archivos DrawIO
-async function loadDrawio(xmlContent, fileName) {
-    const pages = parseDrawioPages(xmlContent);
-    const activePage = 0;
+function escapeHtmlAttribute(value) {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
 
-    // Construir barra de pestañas si hay más de una
-    let tabsHtml = '';
-    if (pages.length > 1) {
-        const tabButtons = pages.map((p, i) =>
-            `<button class="drawio-tab${i === activePage ? ' active' : ''}" data-page="${i}">${p.name}</button>`
-        ).join('');
-        tabsHtml = `<div class="drawio-tabs">${tabButtons}</div>`;
-    }
-
-    // Intentar crear URL para el visor embebido
-    let viewerHtml = '';
-    try {
-        const viewerUrl = buildDrawioViewerUrl(xmlContent, fileName, activePage);
-        if (viewerUrl) {
-            viewerHtml = `
-                <iframe 
-                    class="drawio-viewer" 
-                    id="drawioIframe"
-                    src="${viewerUrl}"
-                    frameborder="0"
-                    allowfullscreen
-                ></iframe>
-            `;
+function createDrawioViewerHtml(xmlContent, pageIndex = 0) {
+    const viewerConfig = {
+        highlight: '#f08705',
+        nav: true,
+        toolbar: 'zoom layers',
+        resize: true,
+        page: Math.max(0, pageIndex || 0),
+        xml: xmlContent
+    };
+    const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    const backgroundColor = currentTheme === 'dark' ? '#0d1117' : '#ffffff';
+    const accentColor = currentTheme === 'dark' ? '#8b949e' : '#656d76';
+    const configAttribute = escapeHtmlAttribute(JSON.stringify(viewerConfig));
+    return `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            background: ${backgroundColor};
+            color: ${accentColor};
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
         }
-    } catch (e) {
-        console.error('Error preparando visor DrawIO:', e);
-    }
+        .mxgraph {
+            width: 100%;
+            height: 100%;
+        }
+        .diagram-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            color: ${accentColor};
+            background: ${backgroundColor};
+        }
+    </style>
+</head>
+<body>
+    <div class="mxgraph" data-mxgraph='${configAttribute}'></div>
+    <div class="diagram-loading" id="diagram-loading">Cargando diagrama...</div>
+    <script>
+        window.addEventListener('load', function () {
+            var loader = document.getElementById('diagram-loading');
+            if (loader && loader.parentNode) {
+                loader.parentNode.removeChild(loader);
+            }
+        });
+    </script>
+    <script src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+</body>
+</html>`;
+}
 
-    // Si no se pudo crear el visor, mostrar placeholder
-    if (!viewerHtml) {
-        viewerHtml = `
+function renderCurrentDrawioPage() {
+    if (!state.currentDrawio) return false;
+    if (typeof Blob === 'undefined' || !window.URL || typeof URL.createObjectURL !== 'function') {
+        throw new Error('El navegador no soporta blobs o URLs temporales.');
+    }
+    const iframe = elements.docsContent.querySelector('#drawioIframe');
+    if (!iframe) {
+        throw new Error('No se encontró el contenedor del visor DrawIO.');
+    }
+    if (state.currentDrawio.objectUrl) {
+        try {
+            URL.revokeObjectURL(state.currentDrawio.objectUrl);
+        } catch (_) {
+            // Ignorar errores al limpiar URLs previas
+        }
+    }
+    const html = createDrawioViewerHtml(state.currentDrawio.xmlContent, state.currentDrawio.activePageIndex || 0);
+    const blob = new Blob([html], { type: 'text/html' });
+    const objectUrl = URL.createObjectURL(blob);
+    state.currentDrawio.objectUrl = objectUrl;
+    iframe.src = objectUrl;
+    iframe.dataset.objectUrl = objectUrl;
+    return true;
+}
+
+function showDrawioFallback(message) {
+    const preview = elements.docsContent.querySelector('.drawio-preview');
+    if (preview) {
+        const safeMessage = escapeHtml(message);
+        preview.innerHTML = `
             <div class="drawio-placeholder">
                 <div class="drawio-placeholder-icon">
                     <svg width="48" height="48" viewBox="0 0 32 32" fill="none">
@@ -2502,9 +2527,35 @@ async function loadDrawio(xmlContent, fileName) {
                     </svg>
                 </div>
                 <h3>Diagrama DrawIO</h3>
-                <p>No se pudo cargar el visor del diagrama</p>
+                <p>${safeMessage}</p>
             </div>
         `;
+    }
+    cleanupDrawioViewer();
+}
+
+// Función para cargar y mostrar archivos DrawIO
+async function loadDrawio(xmlContent, fileName) {
+    cleanupDrawioViewer();
+    const parsedPages = parseDrawioPages(xmlContent);
+    const pages = parsedPages.length ? parsedPages : [{ name: 'Página 1', index: 0 }];
+    const initialPageIndex = Number.isFinite(pages[0]?.index) ? pages[0].index : 0;
+
+    state.currentDrawio = {
+        xmlContent,
+        fileName,
+        pages,
+        activePageIndex: initialPageIndex,
+        objectUrl: null
+    };
+
+    let tabsHtml = '';
+    if (pages.length > 1) {
+        const tabButtons = pages.map((page, idx) => {
+            const isActive = idx === 0;
+            return `<button class="drawio-tab${isActive ? ' active' : ''}" data-page-index="${page.index}">${escapeHtml(page.name)}</button>`;
+        }).join('');
+        tabsHtml = `<div class="drawio-tabs">${tabButtons}</div>`;
     }
 
     const drawioLogoSvg = `<svg width="20" height="20" viewBox="0 0 32 32" fill="none">
@@ -2517,32 +2568,51 @@ async function loadDrawio(xmlContent, fileName) {
         <div class="drawio-container">
             <div class="drawio-header">
                 <span class="drawio-icon">${drawioLogoSvg}</span>
-                <span class="drawio-title">${fileName}</span>
+                <span class="drawio-title">${escapeHtml(fileName)}</span>
             </div>
             ${tabsHtml}
             <div class="drawio-preview">
-                ${viewerHtml}
+                <iframe 
+                    class="drawio-viewer"
+                    id="drawioIframe"
+                    title="Visor del diagrama DrawIO"
+                    loading="lazy"
+                    frameborder="0"
+                    allowfullscreen
+                ></iframe>
             </div>
         </div>
     `;
 
-    // Configurar eventos de las pestañas
-    if (pages.length > 1) {
+    let viewerReady = true;
+    try {
+        viewerReady = renderCurrentDrawioPage();
+    } catch (error) {
+        console.error('Error preparando visor DrawIO:', error);
+        viewerReady = false;
+    }
+
+    if (!viewerReady) {
+        showDrawioFallback('No se pudo cargar el visor local del diagrama');
+    } else if (pages.length > 1) {
         const tabContainer = elements.docsContent.querySelector('.drawio-tabs');
-        tabContainer.addEventListener('click', (e) => {
-            const tab = e.target.closest('.drawio-tab');
-            if (!tab) return;
-            const pageIndex = parseInt(tab.dataset.page, 10);
-            // Actualizar pestaña activa
-            tabContainer.querySelectorAll('.drawio-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            // Recargar iframe con la página seleccionada
-            const iframe = elements.docsContent.querySelector('#drawioIframe');
-            if (iframe) {
-                const newUrl = buildDrawioViewerUrl(xmlContent, fileName, pageIndex);
-                if (newUrl) iframe.src = newUrl;
-            }
-        });
+        if (tabContainer) {
+            tabContainer.addEventListener('click', (e) => {
+                const tab = e.target.closest('.drawio-tab');
+                if (!tab) return;
+                tabContainer.querySelectorAll('.drawio-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const pageIndex = Number.parseInt(tab.dataset.pageIndex, 10);
+                if (!state.currentDrawio) return;
+                state.currentDrawio.activePageIndex = Number.isFinite(pageIndex) ? pageIndex : 0;
+                try {
+                    renderCurrentDrawioPage();
+                } catch (tabError) {
+                    console.error('Error cambiando de pestaña DrawIO:', tabError);
+                    showDrawioFallback('No se pudo cambiar a la página seleccionada');
+                }
+            });
+        }
     }
 
     elements.docsFileName.textContent = fileName;
