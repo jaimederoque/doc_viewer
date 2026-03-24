@@ -922,8 +922,8 @@ function renderSidebarProject(project, container, index) {
         </div>
         <div class="project-search-bar" id="search-bar-${project.id}" style="display: none;">
             <input type="text" class="project-search-input" id="search-input-${project.id}" placeholder="Buscar en archivos...">
-            <button class="project-search-btn" title="Buscar">${SVG_ICONS.search}</button>
-            <button class="project-search-clear" title="Limpiar">×</button>
+            <button class="project-search-btn" title="Buscar" aria-label="Buscar en proyecto">${SVG_ICONS.search}</button>
+            <button class="project-search-clear" title="Limpiar" aria-label="Limpiar búsqueda">${SVG_ICONS.close}</button>
         </div>
         <div class="file-tree" id="tree-${project.id}" style="display: ${isExpanded ? 'block' : 'none'};"></div>
     `;
