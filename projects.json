@@ -242,7 +242,14 @@
           "type": "folder",
           "id": "folder-1770718195633",
           "name": "ETL",
-          "items": []
+          "items": [
+            {
+              "type": "project",
+              "id": "1774355225239",
+              "name": "talend_odh_catalog",
+              "path": "C:\\Users\\A025WR\\Documents\\Proyectos\\ODH\\talend_odh_catalog ✅"
+            }
+          ]
         },
         {
           "type": "folder",
