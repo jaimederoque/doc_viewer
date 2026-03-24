@@ -915,6 +915,7 @@ function renderSidebarProject(project, container, index) {
             <span class="project-toggle" id="toggle-${project.id}">${SVG_ICONS.chevron}</span>
             <span class="project-icon">${SVG_ICONS.project}</span>
             <span class="project-name" title="${project.path}">${project.name}</span>
+            <button class="project-action-btn project-download" title="Descargar MD unificado">${SVG_ICONS.download}</button>
             <button class="project-action-btn project-search" title="Buscar">${SVG_ICONS.search}</button>
             <button class="project-action-btn project-delete" title="Eliminar">${SVG_ICONS.trash}</button>
         </div>
@@ -936,6 +937,11 @@ function renderSidebarProject(project, container, index) {
         toggleProject(project.id);
     });
     
+    header.querySelector('.project-download').addEventListener('click', (e) => {
+        e.stopPropagation();
+        downloadMergedMarkdown(project.id, project.name);
+    });
+
     header.querySelector('.project-search').addEventListener('click', (e) => {
         e.stopPropagation();
         toggleProjectSearch(project.id, e);
@@ -1796,6 +1802,32 @@ function initiateDelete(projectId, filePath, fileName, type, event) {
     });
 }
 
+// Función para descargar MD unificado del proyecto
+async function downloadMergedMarkdown(projectId, projectName) {
+    try {
+        showToast('Generando markdown unificado...', 'info');
+        const response = await fetch(`/api/projects/${projectId}/merged-md`);
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            showToast(error.error || 'Error al generar el markdown', 'error');
+            return;
+        }
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${projectName}.md`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Markdown descargado correctamente', 'success');
+    } catch (error) {
+        console.error('Error downloading merged markdown:', error);
+        showToast('Error al descargar el markdown', 'error');
+    }
+}
+
 // Función para eliminar archivo o carpeta
 async function deleteItem(projectId, filePath, fileName, type) {
     try {
@@ -2401,21 +2433,53 @@ function encodeDrawioContent(xmlContent) {
     }
 }
 
+// Función para extraer las pestañas/páginas de un archivo DrawIO
+function parseDrawioPages(xmlContent) {
+    try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xmlContent, 'text/xml');
+        const diagrams = doc.querySelectorAll('diagram');
+        if (diagrams.length === 0) return [];
+        return Array.from(diagrams).map((d, i) => ({
+            name: d.getAttribute('name') || `Página ${i + 1}`,
+            index: i
+        }));
+    } catch (e) {
+        console.error('Error parseando páginas DrawIO:', e);
+        return [];
+    }
+}
+
+// Función para construir la URL del visor DrawIO para una página concreta
+function buildDrawioViewerUrl(xmlContent, fileName, pageIndex) {
+    const compressed = encodeDrawioContent(xmlContent);
+    if (!compressed) return null;
+    return `https://viewer.diagrams.net/?tags=%7B%7D&highlight=0000ff&nav=1&title=${encodeURIComponent(fileName)}&lightbox=1&page=${pageIndex}#R${compressed}`;
+}
+
 // Función para cargar y mostrar archivos DrawIO
 async function loadDrawio(xmlContent, fileName) {
+    const pages = parseDrawioPages(xmlContent);
+    const activePage = 0;
+
+    // Construir barra de pestañas si hay más de una
+    let tabsHtml = '';
+    if (pages.length > 1) {
+        const tabButtons = pages.map((p, i) =>
+            `<button class="drawio-tab${i === activePage ? ' active' : ''}" data-page="${i}">${p.name}</button>`
+        ).join('');
+        tabsHtml = `<div class="drawio-tabs">${tabButtons}</div>`;
+    }
+
     // Intentar crear URL para el visor embebido
     let viewerHtml = '';
-    
     try {
-        // Comprimir el XML para el visor
-        const compressed = encodeDrawioContent(xmlContent);
-        
-        if (compressed) {
-            const viewerUrl = `https://viewer.diagrams.net/?tags=%7B%7D&highlight=0000ff&nav=1&title=${encodeURIComponent(fileName)}&lightbox=1#R${compressed}`;
-            
+        const viewerUrl = buildDrawioViewerUrl(xmlContent, fileName, activePage);
+        if (viewerUrl) {
             viewerHtml = `
                 <iframe 
                     class="drawio-viewer" 
+                    id="drawioIframe"
                     src="${viewerUrl}"
                     frameborder="0"
                     allowfullscreen
@@ -2425,7 +2489,7 @@ async function loadDrawio(xmlContent, fileName) {
     } catch (e) {
         console.error('Error preparando visor DrawIO:', e);
     }
-    
+
     // Si no se pudo crear el visor, mostrar placeholder
     if (!viewerHtml) {
         viewerHtml = `
@@ -2442,25 +2506,45 @@ async function loadDrawio(xmlContent, fileName) {
             </div>
         `;
     }
-    
+
     const drawioLogoSvg = `<svg width="20" height="20" viewBox="0 0 32 32" fill="none">
         <rect x="2" y="2" width="28" height="28" rx="4" fill="#F08705"/>
         <path d="M8 12h6v8H8zM18 12h6v8h-6z" fill="white"/>
         <path d="M14 15h4v2h-4z" fill="white"/>
     </svg>`;
-    
+
     elements.docsContent.innerHTML = `
         <div class="drawio-container">
             <div class="drawio-header">
                 <span class="drawio-icon">${drawioLogoSvg}</span>
                 <span class="drawio-title">${fileName}</span>
             </div>
+            ${tabsHtml}
             <div class="drawio-preview">
                 ${viewerHtml}
             </div>
         </div>
     `;
-    
+
+    // Configurar eventos de las pestañas
+    if (pages.length > 1) {
+        const tabContainer = elements.docsContent.querySelector('.drawio-tabs');
+        tabContainer.addEventListener('click', (e) => {
+            const tab = e.target.closest('.drawio-tab');
+            if (!tab) return;
+            const pageIndex = parseInt(tab.dataset.page, 10);
+            // Actualizar pestaña activa
+            tabContainer.querySelectorAll('.drawio-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            // Recargar iframe con la página seleccionada
+            const iframe = elements.docsContent.querySelector('#drawioIframe');
+            if (iframe) {
+                const newUrl = buildDrawioViewerUrl(xmlContent, fileName, pageIndex);
+                if (newUrl) iframe.src = newUrl;
+            }
+        });
+    }
+
     elements.docsFileName.textContent = fileName;
     state.currentDoc = null;
     setDocEditingState(false);

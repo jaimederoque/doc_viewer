@@ -89,6 +89,19 @@ function findProjectById(id, items = projectsData.items) {
     return null;
 }
 
+function findProjectParentFolder(id, items = projectsData.items, parentName = null) {
+    for (const item of items) {
+        if (item.type === 'project' && item.id === id) {
+            return parentName;
+        }
+        if (item.type === 'folder' && item.items) {
+            const found = findProjectParentFolder(id, item.items, item.name);
+            if (found !== undefined) return found;
+        }
+    }
+    return undefined;
+}
+
 function removeItemById(id, items = projectsData.items) {
     for (let i = 0; i < items.length; i += 1) {
         const current = items[i];
@@ -112,5 +125,6 @@ module.exports = {
     saveProjectsToDisk,
     getAllProjects,
     findProjectById,
+    findProjectParentFolder,
     removeItemById
 };

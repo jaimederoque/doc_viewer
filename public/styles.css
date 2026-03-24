@@ -1449,6 +1449,11 @@ body {
     line-height: 1.7;
 }
 
+.markdown-content:has(.drawio-container) {
+    padding: 0;
+    overflow: hidden;
+}
+
 .markdown-content h1,
 .markdown-content h2,
 .markdown-content h3,
@@ -2581,9 +2586,9 @@ body {
 .drawio-preview {
     flex: 1;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
     background-color: var(--bg-tertiary);
+    overflow: hidden;
 }
 
 .drawio-placeholder {
@@ -2606,10 +2611,48 @@ body {
     margin-bottom: 20px;
 }
 
+/* DrawIO Tabs */
+.drawio-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 12px;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+
+.drawio-tabs::-webkit-scrollbar {
+    height: 3px;
+}
+
+.drawio-tab {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.drawio-tab:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-hover);
+}
+
+.drawio-tab.active {
+    color: var(--drawio-color);
+    border-bottom-color: var(--drawio-color);
+}
+
 .drawio-viewer {
     flex: 1;
     width: 100%;
-    min-height: 500px;
+    height: 100%;
     background-color: white;
     border: none;
 }

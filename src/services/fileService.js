@@ -170,6 +170,75 @@ function saveMarkdownFile(projectPath, relativePath, content) {
     };
 }
 
+function collectMarkdownFiles(dirPath, basePath, relativeTo = '') {
+    const results = [];
+    let entries;
+    try {
+        entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    } catch {
+        return results;
+    }
+    for (const entry of entries) {
+        const fullPath = path.join(dirPath, entry.name);
+        const relPath = relativeTo ? `${relativeTo}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) {
+            if (['node_modules', '.git', 'target', '.idea', 'build'].includes(entry.name)) continue;
+            results.push(...collectMarkdownFiles(fullPath, basePath, relPath));
+        } else if (entry.isFile() && path.extname(entry.name).toLowerCase() === '.md') {
+            results.push({ relativePath: relPath, fullPath });
+        }
+    }
+    return results;
+}
+
+function getMergedMarkdown(projectPath, projectName, projectType) {
+    const normalizedPath = path.normalize(projectPath);
+    const mdFiles = collectMarkdownFiles(normalizedPath, normalizedPath);
+
+    // Separate README from the rest
+    let readmeFile = null;
+    const otherFiles = [];
+    for (const f of mdFiles) {
+        const name = path.basename(f.relativePath).toLowerCase();
+        const dir = path.dirname(f.relativePath);
+        // Root-level README or inside documentacion/
+        if (name === 'readme.md' && (dir === '.' || dir.toLowerCase() === 'documentacion')) {
+            if (!readmeFile || dir.toLowerCase() === 'documentacion') {
+                readmeFile = f;
+            }
+        } else {
+            otherFiles.push(f);
+        }
+    }
+
+    // Sort other files: group by directory, then alphabetical
+    otherFiles.sort((a, b) => a.relativePath.localeCompare(b.relativePath, 'es'));
+
+    // Build the merged markdown
+    const typeLabel = projectType || 'PROYECTO';
+    const parts = [];
+    parts.push(`# ${typeLabel}: ${projectName}\n`);
+
+    if (readmeFile) {
+        const content = fs.readFileSync(readmeFile.fullPath, 'utf-8');
+        parts.push(`---\n\n## README\n\n> Fuente: \`${readmeFile.relativePath}\`\n\n${content}`);
+    }
+
+    let lastDir = null;
+    for (const f of otherFiles) {
+        const dir = path.dirname(f.relativePath);
+        if (dir !== lastDir) {
+            parts.push(`---\n\n## 📁 ${dir === '.' ? '(raíz)' : dir}\n`);
+            lastDir = dir;
+        }
+        const content = fs.readFileSync(f.fullPath, 'utf-8');
+        const baseName = path.basename(f.relativePath);
+        parts.push(`### ${baseName}\n\n> Fuente: \`${f.relativePath}\`\n\n${content}\n`);
+    }
+
+    return parts.join('\n');
+}
+
 module.exports = {
     getProjectTree,
     getFileContent,
@@ -177,5 +246,6 @@ module.exports = {
     getRawFile,
     deleteFileOrFolder,
     uploadFiles,
-    saveMarkdownFile
+    saveMarkdownFile,
+    getMergedMarkdown
 };

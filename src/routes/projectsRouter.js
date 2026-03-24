@@ -16,10 +16,11 @@ const {
     getRawFile,
     deleteFileOrFolder,
     uploadFiles,
-    saveMarkdownFile
+    saveMarkdownFile,
+    getMergedMarkdown
 } = require('../services/fileService');
 const { searchInProject } = require('../services/searchService');
-const { findProjectById } = require('../store/projectStore');
+const { findProjectById, findProjectParentFolder } = require('../store/projectStore');
 const { NotFoundError } = require('../utils/httpErrors');
 const { MAX_UPLOAD_FILES } = require('../config/env');
 
@@ -83,6 +84,23 @@ router.get('/:id/tree', asyncHandler((req, res) => {
     const project = ensureProject(req.params.id);
     const tree = getProjectTree(project.path);
     res.json(tree);
+}));
+
+router.get('/:id/merged-md', asyncHandler((req, res) => {
+    const project = ensureProject(req.params.id);
+    const parentFolder = findProjectParentFolder(req.params.id);
+    const typeMap = {
+        'ETL': 'ETL',
+        'SERVICIOS': 'SERVICIOS',
+        'TRIGGERS': 'TRIGGER',
+        'TRIGGER': 'TRIGGER'
+    };
+    const projectType = (parentFolder && typeMap[parentFolder.toUpperCase()]) || parentFolder || 'PROYECTO';
+    const merged = getMergedMarkdown(project.path, project.name, projectType);
+    const fileName = `${project.name}.md`;
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(merged);
 }));
 
 router.get('/:id/file', asyncHandler((req, res) => {
